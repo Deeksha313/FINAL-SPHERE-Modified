@@ -3411,11 +3411,11 @@ h6 { font-size: 0.825rem; font-weight: 600; }
     overflow: hidden;
 }
 
-/* Green border for marked/completed cards */
+/* Green border for marked/completed cards - REMOVED */
 .maturity-overview-card.marked {
-    border-left: 6px solid #28a745;
-    border-left-width: 6px;
-    padding-left: 0.75rem;
+    /* border-left: 6px solid #28a745; */
+    /* border-left-width: 6px; */
+    /* padding-left: 0.75rem; */
 }
 
 .maturity-overview-card:before {

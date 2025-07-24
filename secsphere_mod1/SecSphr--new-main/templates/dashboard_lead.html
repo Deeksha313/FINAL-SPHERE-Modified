@@ -175,10 +175,18 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card dashboard-card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="bi bi-bar-chart me-2"></i>Section Performance Overview
                 </h5>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm me-2" onclick="showQuestionsModal()">
+                        <i class="bi bi-list-ul me-1"></i>Questions
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="showReviewModal()">
+                        <i class="bi bi-pencil-square me-1"></i>Review
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -214,132 +222,7 @@
     </div>
 </div>
 
-<!-- Unified Table View -->
-<div class="row">
-    <div class="col-12">
-        <div class="card dashboard-card">
-            <div class="card-header bg-gradient-primary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-clipboard-check me-2"></i>All Questionnaire Responses
-                </h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="12%">Client</th>
-                                <th width="12%">Product</th>
-                                <th width="12%">Section</th>
-                                <th width="8%">#</th>
-                                <th width="30%">Question</th>
-                                <th width="10%">Status</th>
-                                <th width="16%">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for client_id, client_data in clients_data.items() %}
-                                {% for product_id, product_data in client_data.products.items() %}
-                                    {% set sections = {} %}
-                                    {% for resp in product_data.responses %}
-                                        {% if resp.section not in sections %}
-                                            {% set _ = sections.update({resp.section: []}) %}
-                                        {% endif %}
-                                        {% set _ = sections[resp.section].append(resp) %}
-                                    {% endfor %}
-                                    {% for section_name, section_responses in sections.items() %}
-                                        {% for resp in section_responses %}
-                                        <tr class="{% if resp.lead_comments|first %}status-{{ (resp.lead_comments|first).status }}{% else %}status-pending{% endif %} question-row"
-                                            data-client="{{ client_data.user.username }}"
-                                            data-product="{{ product_data.product.name }}"
-                                            data-section="{{ section_name }}">
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-person-circle me-2 text-primary"></i>
-                                                    <div>
-                                                        <div class="fw-medium">{{ client_data.user.username }}</div>
-                                                        <small class="text-muted">{{ client_data.user.organization or 'No Org' }}</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-box-seam me-2 text-info"></i>
-                                                    <span class="fw-medium">{{ product_data.product.name }}</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-light text-dark">{{ section_name }}</span>
-                                            </td>
-                                            <td>
-                                                <span class="question-number-clean fw-bold">{{ loop.index }}</span>
-                                            </td>
-                                            <td>
-                                                <div class="question-preview">
-                                                    <p class="mb-1 fw-medium">{{ resp.question[:80] }}{% if resp.question|length > 80 %}...{% endif %}</p>
-                                                    {% if resp.client_comment %}
-                                                        <small class="text-muted">
-                                                            <i class="bi bi-chat-dots me-1"></i>{{ resp.client_comment[:50] }}{% if resp.client_comment|length > 50 %}...{% endif %}
-                                                        </small>
-                                                    {% endif %}
-                                                    <div class="mt-1">
-                                                        <small class="text-info">
-                                                            <i class="bi bi-check-circle me-1"></i>{{ resp.answer }}
-                                                        </small>
-                                                        {% if resp.evidence_path %}
-                                                            <a href="/{{ resp.evidence_path }}" target="_blank"
-                                                               class="btn btn-outline-info btn-sm ms-2"
-                                                               title="View Evidence">
-                                                                <i class="bi bi-paperclip"></i>
-                                                            </a>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {% set lead_comment = resp.lead_comments|first %}
-                                                {% if lead_comment %}
-                                                    {% if lead_comment.status == 'approved' %}
-                                                        <span class="badge bg-success">
-                                                            <i class="bi bi-check-circle me-1"></i>Approved
-                                                        </span>
-                                                    {% elif lead_comment.status == 'needs_revision' %}
-                                                        <span class="badge bg-warning">
-                                                            <i class="bi bi-exclamation-triangle me-1"></i>Needs Revision
-                                                        </span>
-                                                    {% elif lead_comment.status == 'rejected' %}
-                                                        <span class="badge bg-danger">
-                                                            <i class="bi bi-x-circle me-1"></i>Rejected
-                                                        </span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">Pending</span>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <span class="badge bg-secondary">Pending</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <button type="button" class="btn btn-outline-primary btn-sm me-1"
-                                                        onclick="openReviewModal({{ resp.id }}, {{ resp.section|tojson }}, {{ resp.question|tojson }}, {{ resp.answer|tojson }}, {{ resp.client_comment|default('')|tojson }}, {{ resp.evidence_path|default('')|tojson }})">
-                                                    <i class="bi bi-pencil-square me-1"></i>Review
-                                                </button>
-                                                <button type="button" class="btn btn-outline-info btn-sm"
-                                                        onclick="openDetailModal({{ resp.id }}, {{ client_data.user.username|tojson }}, {{ product_data.product.name|tojson }}, {{ resp.section|tojson }}, {{ resp.question|tojson }}, {{ resp.answer|tojson }}, {{ resp.client_comment|default('')|tojson }}, {{ resp.evidence_path|default('')|tojson }})">
-                                                    <i class="bi bi-eye me-1"></i>Details
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    {% endfor %}
-                                {% endfor %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Section removed - Questions and Review functionality moved to modals -->
 
 <!-- Detail Modal -->
 <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
@@ -535,6 +418,120 @@
                 </button>
                 <button type="button" class="btn btn-gradient-primary" onclick="submitReview()">
                     <i class="bi bi-check-lg me-2"></i>Submit Review
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Questions Modal -->
+<div class="modal fade" id="questionsModal" tabindex="-1" aria-labelledby="questionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="questionsModalLabel">
+                    <i class="bi bi-list-ul me-2"></i>All Questions by Section
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="list-group" id="sectionTabs" role="tablist">
+                            <a class="list-group-item list-group-item-action active" id="build-deployment-tab" data-bs-toggle="list" href="#build-deployment" role="tab">
+                                <i class="bi bi-tools me-2"></i>Build & Deployment
+                            </a>
+                            <a class="list-group-item list-group-item-action" id="culture-organization-tab" data-bs-toggle="list" href="#culture-organization" role="tab">
+                                <i class="bi bi-people me-2"></i>Culture & Organization
+                            </a>
+                            <a class="list-group-item list-group-item-action" id="implementation-tab" data-bs-toggle="list" href="#implementation" role="tab">
+                                <i class="bi bi-code-slash me-2"></i>Implementation
+                            </a>
+                            <a class="list-group-item list-group-item-action" id="information-gathering-tab" data-bs-toggle="list" href="#information-gathering" role="tab">
+                                <i class="bi bi-search me-2"></i>Information Gathering
+                            </a>
+                            <a class="list-group-item list-group-item-action" id="test-verification-tab" data-bs-toggle="list" href="#test-verification" role="tab">
+                                <i class="bi bi-check-circle me-2"></i>Test & Verification
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="tab-content" id="sectionTabContent">
+                            {% set sections = {
+                                'Build and Deployment': 'build-deployment',
+                                'Culture and Organization': 'culture-organization', 
+                                'Implementation': 'implementation',
+                                'Information Gathering': 'information-gathering',
+                                'Test and Verification': 'test-verification'
+                            } %}
+                            
+                            {% for section_name, section_id in sections.items() %}
+                            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ section_id }}" role="tabpanel">
+                                <h6 class="mb-3">{{ section_name }}</h6>
+                                <div class="questions-list">
+                                    {% for client_id, client_data in clients_data.items() %}
+                                        {% for product_id, product_data in client_data.products.items() %}
+                                            {% for resp in product_data.responses %}
+                                                {% if resp.section == section_name %}
+                                                <div class="question-item mb-3 p-3 border rounded">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <div class="client-info">
+                                                            <strong class="text-primary">{{ client_data.user.username }}</strong>
+                                                            <small class="text-muted ms-2">{{ product_data.product.name }}</small>
+                                                        </div>
+                                                        <div class="status-badge">
+                                                            {% set lead_comment = resp.lead_comments|first %}
+                                                            {% if lead_comment %}
+                                                                {% if lead_comment.status == 'approved' %}
+                                                                    <span class="badge bg-success">Approved</span>
+                                                                {% elif lead_comment.status == 'needs_revision' %}
+                                                                    <span class="badge bg-warning">Needs Revision</span>
+                                                                {% elif lead_comment.status == 'rejected' %}
+                                                                    <span class="badge bg-danger">Rejected</span>
+                                                                {% else %}
+                                                                    <span class="badge bg-secondary">Pending</span>
+                                                                {% endif %}
+                                                            {% else %}
+                                                                <span class="badge bg-secondary">Pending</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="question-text mb-2">
+                                                        <strong>Q:</strong> {{ resp.question }}
+                                                    </div>
+                                                    <div class="answer-text mb-2">
+                                                        <strong>A:</strong> <span class="badge bg-info">{{ resp.answer }}</span>
+                                                        {% if resp.evidence_path %}
+                                                            <a href="/{{ resp.evidence_path }}" target="_blank" class="btn btn-outline-info btn-sm ms-2">
+                                                                <i class="bi bi-paperclip"></i>
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if resp.client_comment %}
+                                                    <div class="client-comment mb-2">
+                                                        <strong>Comment:</strong> {{ resp.client_comment }}
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if lead_comment and lead_comment.comment %}
+                                                    <div class="lead-comment">
+                                                        <strong class="text-success">Reviewer Comment:</strong> {{ lead_comment.comment }}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-2"></i>Close
                 </button>
             </div>
         </div>
@@ -850,6 +847,155 @@ function markReplyAsRead() {
             alert('Error marking reply as read. Please try again.');
         });
     }
+}
+
+// Questions and Review Modal Functions
+function showQuestionsModal() {
+    new bootstrap.Modal(document.getElementById('questionsModal')).show();
+}
+
+function showReviewModal() {
+    // Create a review modal that shows all responses for review
+    const reviewModalContent = `
+        <div class="modal fade" id="reviewAllModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-gradient-secondary text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-pencil-square me-2"></i>Review All Responses
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>Product</th>
+                                        <th>Section</th>
+                                        <th>Question</th>
+                                        <th>Answer</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for client_id, client_data in clients_data.items() %}
+                                        {% for product_id, product_data in client_data.products.items() %}
+                                            {% for resp in product_data.responses %}
+                                            <tr>
+                                                <td>{{ client_data.user.username }}</td>
+                                                <td>{{ product_data.product.name }}</td>
+                                                <td><span class="badge bg-light text-dark">{{ resp.section }}</span></td>
+                                                <td>{{ resp.question[:50] }}{% if resp.question|length > 50 %}...{% endif %}</td>
+                                                <td><span class="badge bg-info">{{ resp.answer }}</span></td>
+                                                <td>
+                                                    {% set lead_comment = resp.lead_comments|first %}
+                                                    {% if lead_comment %}
+                                                        {% if lead_comment.status == 'approved' %}
+                                                            <span class="badge bg-success">Approved</span>
+                                                        {% elif lead_comment.status == 'needs_revision' %}
+                                                            <span class="badge bg-warning">Needs Revision</span>
+                                                        {% elif lead_comment.status == 'rejected' %}
+                                                            <span class="badge bg-danger">Rejected</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Pending</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Pending</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-outline-primary btn-sm" 
+                                                            onclick="openReviewModal({{ resp.id }}, {{ resp.section|tojson }}, {{ resp.question|tojson }}, {{ resp.answer|tojson }}, {{ resp.client_comment|default('')|tojson }}, {{ resp.evidence_path|default('')|tojson }})">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if present
+    const existingModal = document.getElementById('reviewAllModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', reviewModalContent);
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('reviewAllModal')).show();
+}
+
+// Add CSS for status cards
+const statusCardCSS = `
+.status-card {
+    position: relative;
+}
+
+.status-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.status-card-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    min-width: 120px;
+    background: white;
+}
+
+.status-card-label:hover {
+    border-color: #3b82f6;
+    background-color: #f8fafc;
+}
+
+.status-card input[type="radio"]:checked + .status-card-label {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.status-card-label i {
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+}
+
+.status-card-label span {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+`;
+
+// Inject CSS into the page
+if (!document.getElementById('statusCardStyles')) {
+    const style = document.createElement('style');
+    style.id = 'statusCardStyles';
+    style.textContent = statusCardCSS;
+    document.head.appendChild(style);
 }
 </script>
 </div>

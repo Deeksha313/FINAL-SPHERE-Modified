@@ -16,6 +16,20 @@
     border-left: 6px solid #28a745 !important;
     box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15) !important;
 }
+
+/* Green color for selected options */
+.answer-option input[type="radio"]:checked + label {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-left: 4px solid #28a745;
+    padding-left: 12px;
+    font-weight: 600;
+    color: #155724;
+}
+
+.question-card.option-selected {
+    border-left: 6px solid #28a745 !important;
+    background-color: rgba(40, 167, 69, 0.02) !important;
+}
 </style>
 {% endblock %}
 
@@ -33,12 +47,12 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center
                         {% if idx == section_idx %}active{% elif done %}text-success{% else %}text-muted{% endif %}">
                         <span>
-                            <i class="bi bi-{% if done %}check-circle-fill{% elif idx == section_idx %}arrow-right-circle-fill{% else %}circle{% endif %} me-2"></i>
+                            <i class="bi bi-{% if done %}circle-fill{% elif idx == section_idx %}arrow-right-circle-fill{% else %}circle{% endif %} me-2"></i>
                             <span class="d-none d-md-inline">{{ section }}</span>
                             <span class="d-md-none">{{ section[:15] }}{% if section|length > 15 %}...{% endif %}</span>
                         </span>
                         {% if done %}
-                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <i class="bi bi-circle-fill text-success"></i>
                         {% elif idx == section_idx %}
                             <span class="badge bg-primary">Current</span>
                         {% endif %}
@@ -116,9 +130,6 @@
                                                     <span class="number-text">{{ outer_loop_index + 1 }}</span>
                                                 </span>
                                                 {{ question.question }}
-                                                {% if review_status == 'approved' %}
-                                                    <i class="bi bi-lock-fill text-success ms-2" title="Response approved and locked"></i>
-                                                {% endif %}
                                             </h6>
                                             {% if question.description %}
                                                 <p class="question-description text-muted mb-3">{{ question.description }}</p>
@@ -230,7 +241,7 @@
                                 {% if section_idx + 1 < total_sections %}
                                     Next Section <i class="bi bi-arrow-right ms-2"></i>
                                 {% else %}
-                                    Complete Assessment <i class="bi bi-check-lg ms-2"></i>
+                                    Complete Assessment
                                 {% endif %}
                             </button>
                         </div>
@@ -457,6 +468,7 @@ document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
         const questionCard = this.closest('.question-card');
         questionCard.classList.add('question-answered');
+        questionCard.classList.add('option-selected');
         questionCard.classList.remove('border-danger');
     });
 });
@@ -465,6 +477,7 @@ document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
 document.querySelectorAll('input[type="radio"]:checked').forEach(function(radio) {
     const questionCard = radio.closest('.question-card');
     questionCard.classList.add('question-answered');
+    questionCard.classList.add('option-selected');
 });
 
 // File upload functionality
@@ -476,7 +489,7 @@ document.querySelectorAll('.file-input').forEach(function(input) {
 
         if (fileName) {
             fileNameDisplay.textContent = fileName;
-            button.innerHTML = '<i class="bi bi-check-circle-fill me-2 text-success"></i>File Selected';
+            button.innerHTML = '<i class="bi bi-paperclip me-2"></i>File Selected';
             button.classList.add('btn-success');
             button.classList.remove('btn-outline-secondary');
         } else {
