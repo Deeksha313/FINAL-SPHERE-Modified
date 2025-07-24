@@ -96,7 +96,7 @@
                     {% for product in products %}
                         {% if product.maturity_score > 0 %}
                         <div class="col-md-6 col-lg-4 col-xl-3 mb-3">
-                            <div class="maturity-overview-card level-{{ product.maturity_score }}">
+                            <div class="maturity-overview-card level-{{ product.maturity_score }} {% if product.status == 'completed' or product.completed_sections == product.total_sections %}marked{% endif %}">
                                 <div class="overview-header">
                                     <h6 class="product-name">{{ product.name }}</h6>
                                     <span class="maturity-badge">Level {{ product.maturity_score }}</span>
@@ -198,6 +198,32 @@
                                         {% endif %}
                                     </span>
                                 </div>
+                                
+                                <!-- Section-wise Dimensions -->
+                                {% if product.section_dimensions %}
+                                <div class="section-dimensions mb-3">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="bi bi-bar-chart me-1"></i>Section Performance
+                                    </h6>
+                                    <div class="row">
+                                        {% for section, data in product.section_dimensions.items() %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="dimension-item">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <small class="fw-medium">{{ section }}</small>
+                                                    <small class="text-muted">{{ data.percentage }}%</small>
+                                                </div>
+                                                <div class="progress" style="height: 4px;">
+                                                    <div class="progress-bar bg-primary" 
+                                                         style="width: {{ data.percentage }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ data.question_count }} questions</small>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
 
                                 <!-- Assessment Progress -->
                                 <div class="assessment-progress mb-3">

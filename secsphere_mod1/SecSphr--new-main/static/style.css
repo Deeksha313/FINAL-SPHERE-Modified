@@ -2648,6 +2648,219 @@ h6 { font-size: 0.825rem; font-weight: 600; }
     gap: 0.5rem;
 }
 
+/* Enhanced file attachment styling */
+.evidence-attachment {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    display: inline-block;
+}
+
+.evidence-attachment a {
+    text-decoration: none;
+    color: #3b82f6;
+    font-size: 0.9rem;
+}
+
+.evidence-attachment a:hover {
+    color: #1d4ed8;
+}
+
+/* Message compose area */
+.message-compose {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+    border: 1px solid #e5e7eb;
+}
+
+.compose-input textarea {
+    border: none;
+    resize: none;
+    box-shadow: none;
+}
+
+.compose-input textarea:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+.compose-attachment {
+    border-top: 1px solid #f3f4f6;
+    padding-top: 0.75rem;
+}
+
+.compose-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Empty chat state */
+.empty-chat {
+    text-align: center;
+    color: #6b7280;
+    padding: 3rem 1rem;
+}
+
+/* WhatsApp-style message bubbles */
+.reviewer-message .message-content::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 12px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 8px 8px 0;
+    border-color: transparent white transparent transparent;
+}
+
+.client-message .message-content::before {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 12px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 0 8px 8px;
+    border-color: transparent transparent transparent #dcf8c6;
+}
+
+/* Performance cards for section dimensions */
+.performance-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    height: 100%;
+}
+
+.dimension-item {
+    margin-bottom: 0.75rem;
+}
+
+.dimension-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Section performance cards */
+.section-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    height: 100%;
+    transition: all 0.2s ease;
+}
+
+.section-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0;
+}
+
+.section-percentage {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6366f1;
+    background: #f0f9ff;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+}
+
+.section-progress .progress {
+    height: 6px;
+    border-radius: 3px;
+}
+
+.section-details {
+    margin-top: 0.5rem;
+}
+
+/* Client Reply Cards */
+.client-reply-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+    padding: 1rem;
+    height: 100%;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.client-reply-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-left-color: #059669;
+}
+
+.reply-header {
+    margin-bottom: 0.75rem;
+}
+
+.client-name {
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.reply-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+}
+
+.product-info {
+    margin-top: 0.5rem;
+}
+
+.reply-preview {
+    margin: 0.75rem 0;
+    color: #4b5563;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.reply-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+/* Modal styling enhancements */
+.original-review-display,
+.client-response-display {
+    max-height: 150px;
+    overflow-y: auto;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+.client-response-display {
+    border-left: 4px solid #10b981 !important;
+}
+
 .reply-form {
     margin-top: 1rem;
     background: white;
@@ -3196,6 +3409,13 @@ h6 { font-size: 0.825rem; font-weight: 600; }
     height: 100%;
     position: relative;
     overflow: hidden;
+}
+
+/* Green border for marked/completed cards */
+.maturity-overview-card.marked {
+    border-left: 6px solid #28a745;
+    border-left-width: 6px;
+    padding-left: 0.75rem;
 }
 
 .maturity-overview-card:before {

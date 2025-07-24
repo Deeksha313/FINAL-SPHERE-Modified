@@ -812,6 +812,49 @@ def calculate_maturity_score(dimension_scores):
     except (TypeError, ValueError, ZeroDivisionError):
         return 0
 
+def get_section_wise_dimensions(product_id, user_id):
+    """Get dimension scores organized by section with detailed breakdown"""
+    try:
+        responses = QuestionnaireResponse.query.filter_by(
+            product_id=product_id, user_id=user_id
+        ).all()
+        
+        section_dimensions = {}
+        
+        for response in responses:
+            section = response.section
+            if section not in section_dimensions:
+                section_dimensions[section] = {
+                    'total_score': 0,
+                    'max_possible_score': 0,
+                    'question_count': 0,
+                    'percentage': 0,
+                    'questions': []
+                }
+            
+            # Get score from CSV
+            score = get_csv_score_for_answer(section, response.question, response.answer)
+            if score is not None and isinstance(score, (int, float)):
+                section_dimensions[section]['total_score'] += score
+                section_dimensions[section]['max_possible_score'] += 5  # Assuming max score is 5
+                section_dimensions[section]['question_count'] += 1
+                section_dimensions[section]['questions'].append({
+                    'question': response.question,
+                    'answer': response.answer,
+                    'score': score
+                })
+        
+        # Calculate percentages
+        for section, data in section_dimensions.items():
+            if data['max_possible_score'] > 0:
+                data['percentage'] = round((data['total_score'] / data['max_possible_score']) * 100, 1)
+            else:
+                data['percentage'] = 0
+        
+        return section_dimensions
+    except Exception:
+        return {}
+
 def update_product_status(product_id, user_id):
     """Update product status based on current responses and reviews"""
     status_record = ProductStatus.query.filter_by(product_id=product_id, user_id=user_id).first()
@@ -1101,6 +1144,7 @@ def dashboard():
             # Calculate new dimension scores and maturity score
             dimension_scores = calculate_dimension_scores(product.id, user_id)
             maturity_score = calculate_maturity_score(dimension_scores)
+            section_dimensions = get_section_wise_dimensions(product.id, user_id)
             
             # Get latest scores for backward compatibility
             latest_scores = ScoreHistory.query.filter_by(
@@ -1127,7 +1171,8 @@ def dashboard():
                 'last_updated': status_record.last_updated,
                 'rejected_count': rejected_count,
                 'dimension_scores': dimension_scores,
-                'maturity_score': maturity_score
+                'maturity_score': maturity_score,
+                'section_dimensions': section_dimensions
             }
             products_with_status.append(product_info)
 
@@ -1159,16 +1204,28 @@ def dashboard():
                 # Calculate dimension scores and maturity score for this product
                 dimension_scores = calculate_dimension_scores(product.id, user.id)
                 maturity_score = calculate_maturity_score(dimension_scores)
+                section_dimensions = get_section_wise_dimensions(product.id, user.id)
                 
                 clients_data[user.id]['products'][product.id] = {
                     'product': product,
                     'responses': [],
                     'dimension_scores': dimension_scores,
-                    'maturity_score': maturity_score
+                    'maturity_score': maturity_score,
+                    'section_dimensions': section_dimensions
                 }
             clients_data[user.id]['products'][product.id]['responses'].append(resp)
 
-        return render_template('dashboard_lead.html', clients_data=clients_data)
+        # Get client replies for lead to see
+        client_replies = LeadComment.query.filter_by(
+            lead_id=session['user_id'], 
+            status='client_reply'
+        ).options(
+            db.joinedload(LeadComment.client),
+            db.joinedload(LeadComment.product),
+            db.joinedload(LeadComment.parent_comment)
+        ).order_by(LeadComment.created_at.desc()).all()
+
+        return render_template('dashboard_lead.html', clients_data=clients_data, client_replies=client_replies)
     elif role == 'superuser':
         products = Product.query.all()
 
@@ -1410,15 +1467,32 @@ def product_results(product_id):
     # Calculate dimension scores and maturity score
     dimension_scores = calculate_dimension_scores(product_id, session['user_id'])
     maturity_score = calculate_maturity_score(dimension_scores)
+    section_dimensions = get_section_wise_dimensions(product_id, session['user_id'])
     
     # Get product info
     product = Product.query.get_or_404(product_id)
     
+    # Convert responses to serializable format
+    responses_json = []
+    for resp in resps:
+        responses_json.append({
+            'id': resp.id,
+            'section': resp.section,
+            'question': resp.question,
+            'answer': resp.answer,
+            'client_comment': resp.client_comment,
+            'score': resp.score,
+            'max_score': resp.max_score,
+            'is_reviewed': resp.is_reviewed
+        })
+    
     return render_template('product_results.html', 
                          responses=resps, 
+                         responses_json=responses_json,
                          lead_comments=lead_comments,
                          dimension_scores=dimension_scores,
                          maturity_score=maturity_score,
+                         section_dimensions=section_dimensions,
                          product=product)
 
 @app.route('/client/comments')
@@ -1609,6 +1683,20 @@ def lead_reply_comment(comment_id):
         flash('Reply sent to client successfully.')
 
     return redirect(request.referrer or url_for('lead_comments'))
+
+@app.route('/lead/reply/<int:reply_id>/read', methods=['POST'])
+@login_required('lead')
+def mark_client_reply_read(reply_id):
+    """Mark a client reply as read by the lead"""
+    reply = LeadComment.query.get_or_404(reply_id)
+    
+    # Check if this lead has permission to mark this reply as read
+    if reply.lead_id != session['user_id'] or reply.status != 'client_reply':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Mark as read (we can add an is_read field to the model later if needed)
+    # For now, we'll just return success
+    return jsonify({'success': True})
 
 @app.route('/change-password-first-login', methods=['GET', 'POST'])
 @login_required('lead')
