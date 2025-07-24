@@ -13,13 +13,13 @@
 <!-- Key Metrics Dashboard -->
 <div class="row mb-4">
     <div class="col-md-3 col-sm-6 mb-3">
-        <div class="metric-card">
+        <div class="metric-card maturity-score-card">
             <div class="metric-icon">
-                <i class="bi bi-trophy"></i>
+                <i class="bi bi-award-fill"></i>
             </div>
             <div class="metric-content">
-                <h3 class="metric-value" id="overallScore">-</h3>
-                <p class="metric-label">Overall Score</p>
+                <h3 class="metric-value">{{ maturity_score }}/5</h3>
+                <p class="metric-label">MATURITY SCORE</p>
             </div>
         </div>
     </div>
@@ -40,7 +40,7 @@
                 <i class="bi bi-layers"></i>
             </div>
             <div class="metric-content">
-                <h3 class="metric-value" id="sectionsCount">-</h3>
+                <h3 class="metric-value">{{ dimension_scores|length }}</h3>
                 <p class="metric-label">Security Dimensions</p>
             </div>
         </div>
@@ -48,15 +48,175 @@
     <div class="col-md-3 col-sm-6 mb-3">
         <div class="metric-card">
             <div class="metric-icon">
-                <i class="bi bi-percent"></i>
+                <i class="bi bi-graph-up"></i>
             </div>
             <div class="metric-content">
-                <h3 class="metric-value" id="completionRate">-</h3>
-                <p class="metric-label">Completion Rate</p>
+                <h3 class="metric-value">{{ "%.1f"|format((dimension_scores.values()|map(attribute='average_score')|sum / dimension_scores|length) if dimension_scores else 0) }}</h3>
+                <p class="metric-label">Average Score</p>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Maturity Level Heatmap -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">
+                            <i class="bi bi-grid-3x3-gap me-2"></i>Security Maturity Heatmap
+                        </h5>
+                        <small class="text-muted">Visual representation of your security maturity across all dimensions</small>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportHeatmapData()" title="Export heatmap data">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Overall Maturity Level Display -->
+                <div class="maturity-level-display mb-4">
+                    <div class="text-center">
+                        <h4 class="mb-2">Overall Maturity Level</h4>
+                        <div class="maturity-badge-large level-{{ maturity_score }}">
+                            <div class="level-number">{{ maturity_score }}</div>
+                            <div class="level-text">
+                                {% if maturity_score == 1 %}
+                                    Initial
+                                {% elif maturity_score == 2 %}
+                                    Developing
+                                {% elif maturity_score == 3 %}
+                                    Defined
+                                {% elif maturity_score == 4 %}
+                                    Managed
+                                {% elif maturity_score == 5 %}
+                                    Optimized
+                                {% else %}
+                                    Not Assessed
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="text-muted mt-2">
+                            {% if maturity_score == 1 %}
+                                Basic security measures in place with ad-hoc processes
+                            {% elif maturity_score == 2 %}
+                                Some security processes defined but inconsistently applied
+                            {% elif maturity_score == 3 %}
+                                Well-defined security processes documented and followed
+                            {% elif maturity_score == 4 %}
+                                Security processes are measured and controlled
+                            {% elif maturity_score == 5 %}
+                                Continuous improvement with optimized security processes
+                            {% else %}
+                                Complete your assessment to see your maturity level
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Heatmap Grid -->
+                {% if dimension_scores %}
+                <div class="heatmap-container">
+                    <div class="row">
+                        {% for dimension, score_data in dimension_scores.items() %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="heatmap-cell level-{{ score_data.average_score|round|int }}">
+                                <div class="cell-header">
+                                    <h6 class="dimension-title">{{ dimension }}</h6>
+                                    <span class="maturity-level">Level {{ score_data.average_score|round|int }}</span>
+                                </div>
+                                <div class="cell-body">
+                                    <div class="score-display">{{ score_data.average_score }}/5</div>
+                                    <div class="questions-count">{{ score_data.question_count }} questions</div>
+                                </div>
+                                <div class="cell-progress">
+                                    <div class="progress">
+                                        <div class="progress-bar level-{{ score_data.average_score|round|int }}-bg" 
+                                             style="width: {{ (score_data.average_score / 5 * 100)|round }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Maturity Legend -->
+                <div class="maturity-legend mt-4">
+                    <h6 class="mb-3">Maturity Levels</h6>
+                    <div class="row">
+                        <div class="col-md-2 col-sm-4 col-6 mb-2">
+                            <div class="legend-item level-1">
+                                <span class="legend-color"></span>
+                                <span class="legend-text">Level 1 - Initial</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-sm-4 col-6 mb-2">
+                            <div class="legend-item level-2">
+                                <span class="legend-color"></span>
+                                <span class="legend-text">Level 2 - Developing</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-sm-4 col-6 mb-2">
+                            <div class="legend-item level-3">
+                                <span class="legend-color"></span>
+                                <span class="legend-text">Level 3 - Defined</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-sm-4 col-6 mb-2">
+                            <div class="legend-item level-4">
+                                <span class="legend-color"></span>
+                                <span class="legend-text">Level 4 - Managed</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-sm-4 col-6 mb-2">
+                            <div class="legend-item level-5">
+                                <span class="legend-color"></span>
+                                <span class="legend-text">Level 5 - Optimized</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dimension Scores Overview -->
+{% if dimension_scores %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Dimension-wise Scores
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for dimension, score_data in dimension_scores.items() %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="dimension-score-card">
+                            <div class="dimension-name">{{ dimension }}</div>
+                            <div class="dimension-score">{{ score_data.average_score }}/5</div>
+                            <div class="dimension-details">
+                                <small class="text-muted">
+                                    {{ score_data.question_count }} questions • 
+                                    Total: {{ score_data.total_score }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Security Dimensions Results -->
 <div class="results-container">
@@ -260,6 +420,82 @@ function calculateSectionScore(responses) {
     });
 
     return Math.round((approvedCount / responses.length) * 100);
+}
+
+// Initialize tooltips for heatmap cells
+document.addEventListener('DOMContentLoaded', function() {
+    // Add tooltips to heatmap cells
+    const heatmapCells = document.querySelectorAll('.heatmap-cell');
+    heatmapCells.forEach(cell => {
+        const dimensionTitle = cell.querySelector('.dimension-title').textContent;
+        const scoreDisplay = cell.querySelector('.score-display').textContent;
+        const questionsCount = cell.querySelector('.questions-count').textContent;
+        const level = cell.classList.toString().match(/level-(\d)/)?.[1] || '0';
+        
+        const levelNames = {
+            '1': 'Initial - Basic security measures with ad-hoc processes',
+            '2': 'Developing - Some processes defined but inconsistently applied',
+            '3': 'Defined - Well-defined processes documented and followed',
+            '4': 'Managed - Processes are measured and controlled',
+            '5': 'Optimized - Continuous improvement with optimized processes'
+        };
+        
+        const tooltipText = `${dimensionTitle}\nScore: ${scoreDisplay}\n${questionsCount}\nLevel: ${levelNames[level] || 'Not assessed'}`;
+        
+        cell.setAttribute('title', tooltipText);
+        cell.setAttribute('data-bs-toggle', 'tooltip');
+        cell.setAttribute('data-bs-placement', 'top');
+    });
+    
+    // Initialize Bootstrap tooltips
+    if (typeof bootstrap !== 'undefined') {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+    
+    // Add click animation to maturity badge
+    const maturityBadge = document.querySelector('.maturity-badge-large');
+    if (maturityBadge) {
+        maturityBadge.addEventListener('click', function() {
+            this.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 200);
+        });
+    }
+});
+
+// Function to export heatmap data (if needed for reports)
+function exportHeatmapData() {
+    {% if maturity_score and dimension_scores %}
+    const heatmapData = {
+        product: '{{ product.name|escape }}',
+        overallMaturityScore: {{ maturity_score }},
+        dimensions: [
+            {% for dimension, score_data in dimension_scores.items() %}
+            {
+                name: '{{ dimension|escape }}',
+                score: {{ score_data.average_score }},
+                level: {{ score_data.average_score|round|int }},
+                questionCount: {{ score_data.question_count }},
+                totalScore: {{ score_data.total_score }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    };
+    
+    // Download as JSON
+    const dataStr = JSON.stringify(heatmapData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${heatmapData.product}_maturity_heatmap.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    {% endif %}
 }
 </script>
 {% endblock %}
