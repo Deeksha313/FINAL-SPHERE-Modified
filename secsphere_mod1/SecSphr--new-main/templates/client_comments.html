@@ -16,7 +16,7 @@
             </div>
         </div>
         <div class="chat-actions">
-            <span class="badge bg-light text-dark">{{ comments|length }} messages</span>
+            <span class="badge bg-light text-dark">{{ comments|length }} conversations</span>
         </div>
     </div>
 
@@ -75,23 +75,27 @@
                                         <i class="bi bi-check2"></i> Mark as Read
                                     </a>
                                 {% endif %}
-                                <button class="btn btn-sm btn-primary"
-                                        onclick="toggleReplyForm({{ comment.id }})">
-                                    <i class="bi bi-reply"></i> Reply
-                                </button>
+                                {% set has_client_reply = comments|selectattr('parent_comment_id', 'equalto', comment.id)|selectattr('status', 'equalto', 'client_reply')|list|length > 0 %}
+                                {% if not has_client_reply %}
+                                    <button class="btn btn-sm btn-primary"
+                                            onclick="toggleReplyForm({{ comment.id }})">
+                                        <i class="bi bi-reply"></i> Reply
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Client Replies -->
-                    {% if comment.replies %}
-                        {% for reply in comment.replies %}
+                    <!-- Client Replies (Show all replies in conversation) -->
+                    {% set all_replies = comments|selectattr('parent_comment_id', 'equalto', comment.id)|list + comments|selectattr('parent_comment_id', 'in', comments|selectattr('parent_comment_id', 'equalto', comment.id)|map(attribute='id')|list)|list %}
+                    {% for reply in all_replies|sort(attribute='created_at') %}
+                        {% if reply.status == 'client_reply' %}
                             <div class="message client-message">
                                 <div class="message-content">
                                     <div class="message-header">
                                         <div class="d-flex align-items-center">
                                             <i class="bi bi-person-circle text-success me-2"></i>
-                                            <strong>{{ reply.client.username }}</strong>
+                                            <strong>You</strong>
                                             <span class="message-time ms-auto">{{ reply.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
                                         </div>
                                     </div>
@@ -113,38 +117,69 @@
                                     </div>
                                 </div>
                             </div>
-                        {% endfor %}
-                    {% endif %}
-
-                    <!-- Reply Form -->
-                    <div class="reply-form" id="replyForm{{ comment.id }}" style="display: none;">
-                        <form method="post" action="{{ url_for('client_reply_comment', comment_id=comment.id) }}" enctype="multipart/form-data">
-                            <div class="message-compose">
-                                <div class="compose-input">
-                                    <textarea class="form-control" name="reply" rows="3"
-                                              placeholder="Type your reply..." required></textarea>
-                                </div>
-                                {% if comment.status in ['needs_revision', 'rejected'] %}
-                                    <div class="compose-attachment mt-2">
-                                        <label class="form-label">
-                                            <i class="bi bi-paperclip me-1"></i>Attach Evidence (Optional)
-                                        </label>
-                                        <input type="file" class="form-control form-control-sm" name="evidence"
-                                               accept=".csv,.txt,.pdf,.jpg,.jpeg,.png,.doc,.docx">
+                        {% elif reply.status == 'lead_reply' %}
+                            <div class="message reviewer-message">
+                                <div class="message-content">
+                                    <div class="message-header">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person-badge text-primary me-2"></i>
+                                            <strong>{{ reply.lead.username }}</strong>
+                                            <span class="message-time ms-auto">{{ reply.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
+                                        </div>
                                     </div>
-                                {% endif %}
-                                <div class="compose-actions mt-3">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-send"></i> Send Reply
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary"
-                                            onclick="toggleReplyForm({{ comment.id }})">
-                                        Cancel
-                                    </button>
+                                    <div class="message-text">
+                                        {% set comment_lines = reply.comment.split('\n') %}
+                                        {% for line in comment_lines %}
+                                            {% if line.startswith('[Evidence File:') and line.endswith(']') %}
+                                                {% set filename = line[15:-1] %}
+                                                <div class="evidence-attachment mt-2">
+                                                    <a href="{{ url_for('static', filename='uploads/' + filename) }}" target="_blank" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="bi bi-paperclip me-1"></i>{{ filename }}
+                                                    </a>
+                                                </div>
+                                            {% else %}
+                                                {% if line.strip() %}{{ line }}<br>{% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             </div>
-                        </form>
-                    </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Reply Form - Only show if no client reply exists -->
+                    {% set has_client_reply = comments|selectattr('parent_comment_id', 'equalto', comment.id)|selectattr('status', 'equalto', 'client_reply')|list|length > 0 %}
+                    {% if not has_client_reply %}
+                        <div class="reply-form" id="replyForm{{ comment.id }}" style="display: none;">
+                            <form method="post" action="{{ url_for('client_reply_comment', comment_id=comment.id) }}" enctype="multipart/form-data">
+                                <div class="message-compose">
+                                    <div class="compose-input">
+                                        <textarea class="form-control" name="reply" rows="3"
+                                                  placeholder="Type your reply..." required></textarea>
+                                    </div>
+                                    {% if comment.status in ['needs_revision', 'rejected'] %}
+                                        <div class="compose-attachment mt-2">
+                                            <label class="form-label">
+                                                <i class="bi bi-paperclip me-1"></i>Attach Evidence (Optional)
+                                            </label>
+                                            <input type="file" class="form-control form-control-sm" name="evidence"
+                                                   accept=".csv,.txt,.pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                        </div>
+                                    {% endif %}
+                                    <div class="compose-actions mt-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-send"></i> Send Reply
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                onclick="toggleReplyForm({{ comment.id }})">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
                 </div>
             {% endfor %}
         {% else %}

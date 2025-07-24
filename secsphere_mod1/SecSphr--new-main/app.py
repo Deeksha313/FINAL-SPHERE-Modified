@@ -728,62 +728,89 @@ def calculate_score_for_answer(question, answer):
 
 def calculate_dimension_scores(product_id, user_id):
     """Calculate dimension-wise scores using the new logic: sum of option scores / total questions in dimension"""
-    responses = QuestionnaireResponse.query.filter_by(
-        product_id=product_id, user_id=user_id
-    ).all()
-    
-    # Group responses by dimension
-    dimension_data = {}
-    
-    for response in responses:
-        dimension = response.section
-        if dimension not in dimension_data:
-            dimension_data[dimension] = {
-                'total_score': 0,
-                'question_count': 0,
-                'questions': []
-            }
+    try:
+        responses = QuestionnaireResponse.query.filter_by(
+            product_id=product_id, user_id=user_id
+        ).all()
         
-        # Get score from CSV
-        score = get_csv_score_for_answer(dimension, response.question, response.answer)
-        if score is not None:
-            dimension_data[dimension]['total_score'] += score
-            dimension_data[dimension]['question_count'] += 1
-            dimension_data[dimension]['questions'].append({
-                'question': response.question,
-                'answer': response.answer,
-                'score': score
-            })
-    
-    # Calculate average score for each dimension
-    dimension_scores = {}
-    for dimension, data in dimension_data.items():
-        if data['question_count'] > 0:
-            avg_score = data['total_score'] / data['question_count']
-            dimension_scores[dimension] = {
-                'average_score': round(avg_score, 2),
-                'total_score': data['total_score'],
-                'question_count': data['question_count'],
-                'questions': data['questions']
-            }
-        else:
-            dimension_scores[dimension] = {
-                'average_score': 0,
-                'total_score': 0,
-                'question_count': 0,
-                'questions': []
-            }
-    
-    return dimension_scores
+        # Group responses by dimension
+        dimension_data = {}
+        
+        for response in responses:
+            try:
+                dimension = response.section
+                if dimension not in dimension_data:
+                    dimension_data[dimension] = {
+                        'total_score': 0,
+                        'question_count': 0,
+                        'questions': []
+                    }
+                
+                # Get score from CSV
+                score = get_csv_score_for_answer(dimension, response.question, response.answer)
+                if score is not None and isinstance(score, (int, float)):
+                    dimension_data[dimension]['total_score'] += score
+                    dimension_data[dimension]['question_count'] += 1
+                    dimension_data[dimension]['questions'].append({
+                        'question': response.question,
+                        'answer': response.answer,
+                        'score': score
+                    })
+            except (TypeError, AttributeError):
+                continue
+        
+        # Calculate average score for each dimension
+        dimension_scores = {}
+        for dimension, data in dimension_data.items():
+            try:
+                if data['question_count'] > 0:
+                    avg_score = data['total_score'] / data['question_count']
+                    dimension_scores[dimension] = {
+                        'average_score': round(avg_score, 2),
+                        'total_score': data['total_score'],
+                        'question_count': data['question_count'],
+                        'questions': data['questions']
+                    }
+                else:
+                    dimension_scores[dimension] = {
+                        'average_score': 0,
+                        'total_score': 0,
+                        'question_count': 0,
+                        'questions': []
+                    }
+            except (TypeError, ZeroDivisionError):
+                dimension_scores[dimension] = {
+                    'average_score': 0,
+                    'total_score': 0,
+                    'question_count': 0,
+                    'questions': []
+                }
+        
+        return dimension_scores
+    except Exception:
+        return {}
 
 def calculate_maturity_score(dimension_scores):
     """Calculate overall maturity score: sum of all dimension averages / total dimensions"""
     if not dimension_scores:
         return 0
     
-    total_avg = sum(dim_data['average_score'] for dim_data in dimension_scores.values())
-    maturity_score = total_avg / len(dimension_scores)
-    return round(maturity_score)
+    try:
+        valid_scores = []
+        for dim_data in dimension_scores.values():
+            if dim_data and isinstance(dim_data, dict) and 'average_score' in dim_data:
+                score = dim_data['average_score']
+                if score is not None and isinstance(score, (int, float)):
+                    valid_scores.append(score)
+        
+        if not valid_scores:
+            return 0
+            
+        total_avg = sum(valid_scores)
+        maturity_score = total_avg / len(valid_scores)
+        return round(maturity_score)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return 0
 
 def update_product_status(product_id, user_id):
     """Update product status based on current responses and reviews"""
@@ -1418,6 +1445,17 @@ def client_reply_comment(comment_id):
         flash('Unauthorized access.')
         return redirect(url_for('dashboard'))
 
+    # Check if client has already replied to this comment
+    existing_reply = LeadComment.query.filter_by(
+        parent_comment_id=comment_id,
+        client_id=session['user_id'],
+        status='client_reply'
+    ).first()
+    
+    if existing_reply:
+        flash('You have already replied to this comment.')
+        return redirect(request.referrer or url_for('client_comments'))
+
     reply_text = request.form['reply']
     evidence_file = request.files.get('evidence')
 
@@ -1539,6 +1577,19 @@ def lead_reply_comment(comment_id):
     ):
         flash('Unauthorized access.')
         return redirect(url_for('dashboard'))
+
+    # Check if lead has already replied to this specific comment thread
+    if parent_comment.status == 'client_reply':
+        # This is a reply to a client reply, check if lead already replied to this client reply
+        existing_reply = LeadComment.query.filter_by(
+            parent_comment_id=comment_id,
+            lead_id=session['user_id'],
+            status='lead_reply'
+        ).first()
+        
+        if existing_reply:
+            flash('You have already replied to this message.')
+            return redirect(request.referrer or url_for('lead_comments'))
 
     reply_text = request.form['reply']
 

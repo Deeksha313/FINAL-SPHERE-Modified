@@ -76,9 +76,9 @@
                     </div>
                     {% endif %}
 
-                    <!-- Client Replies -->
-                    {% set client_replies = comments|selectattr('parent_comment_id', 'equalto', comment.id)|list %}
-                    {% for reply in client_replies %}
+                    <!-- All Replies in Conversation -->
+                    {% set all_replies = comments|selectattr('parent_comment_id', 'equalto', comment.id)|list + comments|selectattr('parent_comment_id', 'in', comments|selectattr('parent_comment_id', 'equalto', comment.id)|map(attribute='id')|list)|list %}
+                    {% for reply in all_replies|sort(attribute='created_at') %}
                         {% if reply.status == 'client_reply' %}
                             <div class="message client-message">
                                 <div class="message-content">
@@ -138,57 +138,58 @@
                         {% endif %}
                     {% endfor %}
 
-                    <!-- Reply Form (only show for conversations that need responses) -->
-                    {% if comment.status in ['needs_revision', 'rejected'] or client_replies|selectattr('status', 'equalto', 'client_reply')|list %}
-                    <div class="reply-form" id="replyForm{{ comment.id }}">
-                        <form method="post" action="{{ url_for('lead_reply_comment', comment_id=comment.id) }}">
-                            <div class="message-compose">
-                                <div class="compose-input">
-                                    <textarea class="form-control" name="reply" rows="3"
-                                              placeholder="Type your reply to {{ comment.client.username }}..." required></textarea>
+                    <!-- Reply Form -->
+                    {% set has_client_replies = comments|selectattr('parent_comment_id', 'equalto', comment.id)|selectattr('status', 'equalto', 'client_reply')|list %}
+                    {% set has_lead_reply = comments|selectattr('parent_comment_id', 'equalto', comment.id)|selectattr('status', 'equalto', 'lead_reply')|list|length > 0 %}
+                    
+                    {% if has_client_replies and not has_lead_reply %}
+                        <!-- Show reply form if client has replied but lead hasn't replied back -->
+                        <div class="reply-form" id="replyForm{{ comment.id }}">
+                            <form method="post" action="{{ url_for('lead_reply_comment', comment_id=comment.id) }}">
+                                <div class="message-compose">
+                                    <div class="compose-input">
+                                        <textarea class="form-control" name="reply" rows="3"
+                                                  placeholder="Type your reply to {{ comment.client.username }}..." required></textarea>
+                                    </div>
+                                    <div class="compose-actions mt-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-send"></i> Send Reply
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                onclick="toggleReplyForm({{ comment.id }})">
+                                            <i class="bi bi-eye-slash"></i> Hide
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="compose-actions mt-3">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-send"></i> Send Reply
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary"
-                                            onclick="toggleReplyForm({{ comment.id }})">
-                                        <i class="bi bi-eye-slash"></i> Hide
-                                    </button>
+                            </form>
+                        </div>
+                    {% elif comment.status in ['needs_revision', 'rejected'] and not has_client_replies %}
+                        <!-- Show reply form for pending responses that need follow-up -->
+                        <div class="reply-form" id="replyForm{{ comment.id }}" style="display: none;">
+                            <form method="post" action="{{ url_for('lead_reply_comment', comment_id=comment.id) }}">
+                                <div class="message-compose">
+                                    <div class="compose-input">
+                                        <textarea class="form-control" name="reply" rows="3"
+                                                  placeholder="Type your follow-up message to {{ comment.client.username }}..." required></textarea>
+                                    </div>
+                                    <div class="compose-actions mt-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-send"></i> Send Follow-up
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                onclick="toggleReplyForm({{ comment.id }})">
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </form>
-                    </div>
-                    {% else %}
-                    <div class="reply-form" id="replyForm{{ comment.id }}" style="display: none;">
-                        <form method="post" action="{{ url_for('lead_reply_comment', comment_id=comment.id) }}">
-                            <div class="message-compose">
-                                <div class="compose-input">
-                                    <textarea class="form-control" name="reply" rows="3"
-                                              placeholder="Type your reply to {{ comment.client.username }}..." required></textarea>
-                                </div>
-                                <div class="compose-actions mt-3">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-send"></i> Send Reply
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary"
-                                            onclick="toggleReplyForm({{ comment.id }})">
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    {% endif %}
-
-                    <!-- Show Reply Button for closed conversations -->
-                    {% if not (comment.status in ['needs_revision', 'rejected'] or client_replies|selectattr('status', 'equalto', 'client_reply')|list) %}
-                    <div class="text-center mt-2">
-                        <button class="btn btn-sm btn-outline-primary"
-                                onclick="toggleReplyForm({{ comment.id }})">
-                            <i class="bi bi-reply"></i> Reply to {{ comment.client.username }}
-                        </button>
-                    </div>
+                            </form>
+                        </div>
+                        <div class="text-center mt-2">
+                            <button class="btn btn-sm btn-outline-primary"
+                                    onclick="toggleReplyForm({{ comment.id }})">
+                                <i class="bi bi-plus-circle"></i> Add Follow-up Message
+                            </button>
+                        </div>
                     {% endif %}
                 </div>
             {% endfor %}

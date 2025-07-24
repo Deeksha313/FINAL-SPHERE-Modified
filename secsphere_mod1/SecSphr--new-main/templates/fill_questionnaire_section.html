@@ -2,6 +2,23 @@
 
 {% block title %}Questionnaire - {{ section_name }} - SecureSphere{% endblock %}
 
+{% block head %}
+<style>
+.question-answered {
+    border-left: 6px solid #28a745 !important;
+    border-top: 1px solid #28a745 !important;
+    border-right: 1px solid #28a745 !important;
+    border-bottom: 1px solid #28a745 !important;
+    background-color: rgba(40, 167, 69, 0.05) !important;
+}
+
+.question-answered:hover {
+    border-left: 6px solid #28a745 !important;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15) !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="questionnaire-container">
@@ -439,17 +456,15 @@ document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
 document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
         const questionCard = this.closest('.question-card');
-        questionCard.classList.add('border-success');
+        questionCard.classList.add('question-answered');
         questionCard.classList.remove('border-danger');
-
-        // Add checkmark next to question number but keep the circle intact
-        const questionNumber = questionCard.querySelector('.question-number');
-        if (questionNumber && !questionNumber.querySelector('.bi-check-circle')) {
-            const checkmark = document.createElement('i');
-            checkmark.className = 'bi bi-check-circle text-success ms-2';
-            questionNumber.appendChild(checkmark);
-        }
     });
+});
+
+// Apply styling to already answered questions on page load
+document.querySelectorAll('input[type="radio"]:checked').forEach(function(radio) {
+    const questionCard = radio.closest('.question-card');
+    questionCard.classList.add('question-answered');
 });
 
 // File upload functionality
