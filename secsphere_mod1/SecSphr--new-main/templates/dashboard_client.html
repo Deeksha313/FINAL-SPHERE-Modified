@@ -151,7 +151,11 @@
                                         <div class="text-info">
                                             <i class="bi bi-graph-up fs-5"></i>
                                         </div>
-                                        <small class="text-muted">{{ product.overall_score }}% Score</small>
+                                        {% if product.maturity_score > 0 %}
+                                            <small class="text-muted">Maturity: {{ product.maturity_score }}/5</small>
+                                        {% else %}
+                                            <small class="text-muted">{{ product.overall_score }}% Score</small>
+                                        {% endif %}
                                     </div>
                                     <div class="col-3">
                                         <div class="{% if product.status == 'completed' %}text-success{% elif product.status == 'questions_done' %}text-warning{% elif product.status == 'under_review' %}text-info{% elif product.status == 'needs_client_response' %}text-danger{% else %}text-primary{% endif %}">
@@ -174,13 +178,13 @@
 
                                 <!-- Action Buttons -->
                                 <div class="d-grid gap-2">
-                                    {% if product.status == 'completed' or product.status == 'review_done' %}
+                                    {% if product.status in ['questions_done', 'under_review', 'completed', 'review_done'] %}
                                         <a href="{{ url_for('product_results', product_id=product.id) }}"
                                            class="btn btn-outline-primary rounded-pill">
                                             <i class="bi bi-bar-chart me-2"></i>View Results
                                         </a>
                                     {% else %}
-                                        <button class="btn btn-outline-secondary rounded-pill" disabled title="Complete assessment to view results">
+                                        <button class="btn btn-outline-secondary rounded-pill" disabled title="Complete all questions to view results">
                                             <i class="bi bi-bar-chart me-2"></i>View Results
                                         </button>
                                     {% endif %}

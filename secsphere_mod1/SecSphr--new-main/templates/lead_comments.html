@@ -90,7 +90,20 @@
                                         </div>
                                     </div>
                                     <div class="message-text">
-                                        {{ reply.comment }}
+                                        {% set comment_lines = reply.comment.split('\n') %}
+                                        {% for line in comment_lines %}
+                                            {% if line.startswith('[Evidence File:') and line.endswith(']') %}
+                                                {% set filename = line[15:-1] %}
+                                                <div class="evidence-attachment mt-2">
+                                                    <a href="{{ url_for('static', filename='uploads/' + filename) }}" target="_blank" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="bi bi-paperclip me-1"></i>{{ filename }}
+                                                    </a>
+                                                </div>
+                                            {% else %}
+                                                {% if line.strip() %}{{ line }}<br>{% endif %}
+                                            {% endif %}
+                                        {% endfor %}
                                     </div>
                                 </div>
                             </div>
@@ -105,7 +118,20 @@
                                         </div>
                                     </div>
                                     <div class="message-text">
-                                        {{ reply.comment }}
+                                        {% set comment_lines = reply.comment.split('\n') %}
+                                        {% for line in comment_lines %}
+                                            {% if line.startswith('[Evidence File:') and line.endswith(']') %}
+                                                {% set filename = line[15:-1] %}
+                                                <div class="evidence-attachment mt-2">
+                                                    <a href="{{ url_for('static', filename='uploads/' + filename) }}" target="_blank" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="bi bi-paperclip me-1"></i>{{ filename }}
+                                                    </a>
+                                                </div>
+                                            {% else %}
+                                                {% if line.strip() %}{{ line }}<br>{% endif %}
+                                            {% endif %}
+                                        {% endfor %}
                                     </div>
                                 </div>
                             </div>

@@ -455,10 +455,43 @@ def fix_naive_datetimes():
     else:
         print("✅ No naive datetime entries found")
 
+def get_csv_score_for_answer(dimension, question, answer):
+    """Get score from CSV for a specific dimension, question, and answer"""
+    try:
+        with open('static/devweb.csv', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            current_dimension = None
+            current_question = None
+            
+            for row in reader:
+                dim = row['Dimensions'].strip()
+                q = row['Questions'].strip()
+                option = row['Options'].strip()
+                score_text = row.get('Scores', '').strip()
+                
+                if dim:
+                    current_dimension = dim
+                if q:
+                    current_question = q
+                    
+                # Check if we found the right combination
+                if (current_dimension == dimension and 
+                    current_question == question and 
+                    option == answer and score_text):
+                    try:
+                        return int(score_text)
+                    except (ValueError, TypeError):
+                        pass
+                        
+    except FileNotFoundError:
+        print("CSV file not found")
+    
+    return None
+
 def calculate_score_for_answer(question, answer):
     """Calculate score for a specific question-answer pair based on CSV data"""
     try:
-        with open('devweb.csv', encoding='utf-8') as f:
+        with open('static/devweb.csv', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             current_question = None
             question_scores = {}
@@ -509,6 +542,65 @@ def calculate_score_for_answer(question, answer):
             return 20
         else:
             return 25
+
+def calculate_dimension_scores(product_id, user_id):
+    """Calculate dimension-wise scores using the new logic: sum of option scores / total questions in dimension"""
+    responses = QuestionnaireResponse.query.filter_by(
+        product_id=product_id, user_id=user_id
+    ).all()
+    
+    # Group responses by dimension
+    dimension_data = {}
+    
+    for response in responses:
+        dimension = response.section
+        if dimension not in dimension_data:
+            dimension_data[dimension] = {
+                'total_score': 0,
+                'question_count': 0,
+                'questions': []
+            }
+        
+        # Get score from CSV
+        score = get_csv_score_for_answer(dimension, response.question, response.answer)
+        if score is not None:
+            dimension_data[dimension]['total_score'] += score
+            dimension_data[dimension]['question_count'] += 1
+            dimension_data[dimension]['questions'].append({
+                'question': response.question,
+                'answer': response.answer,
+                'score': score
+            })
+    
+    # Calculate average score for each dimension
+    dimension_scores = {}
+    for dimension, data in dimension_data.items():
+        if data['question_count'] > 0:
+            avg_score = data['total_score'] / data['question_count']
+            dimension_scores[dimension] = {
+                'average_score': round(avg_score, 2),
+                'total_score': data['total_score'],
+                'question_count': data['question_count'],
+                'questions': data['questions']
+            }
+        else:
+            dimension_scores[dimension] = {
+                'average_score': 0,
+                'total_score': 0,
+                'question_count': 0,
+                'questions': []
+            }
+    
+    return dimension_scores
+
+def calculate_maturity_score(dimension_scores):
+    """Calculate overall maturity score: sum of all dimension averages / total dimensions"""
+    if not dimension_scores:
+        return 0
+    
+    total_avg = sum(dim_data['average_score'] for dim_data in dimension_scores.values())
+    maturity_score = total_avg / len(dimension_scores)
+    return round(maturity_score)
 
 def update_product_status(product_id, user_id):
     """Update product status based on current responses and reviews"""
@@ -796,7 +888,11 @@ def dashboard():
                     next_section_idx = i
                     break
 
-            # Get latest scores
+            # Calculate new dimension scores and maturity score
+            dimension_scores = calculate_dimension_scores(product.id, user_id)
+            maturity_score = calculate_maturity_score(dimension_scores)
+            
+            # Get latest scores for backward compatibility
             latest_scores = ScoreHistory.query.filter_by(
                 product_id=product.id, user_id=user_id
             ).order_by(ScoreHistory.calculated_at.desc()).all()
@@ -819,7 +915,9 @@ def dashboard():
                 'total_questions': status_record.total_questions,
                 'overall_score': round(overall_percentage, 1),
                 'last_updated': status_record.last_updated,
-                'rejected_count': rejected_count
+                'rejected_count': rejected_count,
+                'dimension_scores': dimension_scores,
+                'maturity_score': maturity_score
             }
             products_with_status.append(product_info)
 
@@ -848,9 +946,15 @@ def dashboard():
                     'products': {}
                 }
             if product.id not in clients_data[user.id]['products']:
+                # Calculate dimension scores and maturity score for this product
+                dimension_scores = calculate_dimension_scores(product.id, user.id)
+                maturity_score = calculate_maturity_score(dimension_scores)
+                
                 clients_data[user.id]['products'][product.id] = {
                     'product': product,
-                    'responses': []
+                    'responses': [],
+                    'dimension_scores': dimension_scores,
+                    'maturity_score': maturity_score
                 }
             clients_data[user.id]['products'][product.id]['responses'].append(resp)
 
@@ -1092,7 +1196,20 @@ def product_results(product_id):
     resps = QuestionnaireResponse.query.filter_by(product_id=product_id, user_id=session['user_id']).all()
     # Get lead comments for this product
     lead_comments = LeadComment.query.options(db.joinedload(LeadComment.product), db.joinedload(LeadComment.lead)).filter_by(product_id=product_id, client_id=session['user_id']).order_by(LeadComment.created_at.desc()).all()
-    return render_template('product_results.html', responses=resps, lead_comments=lead_comments)
+    
+    # Calculate dimension scores and maturity score
+    dimension_scores = calculate_dimension_scores(product_id, session['user_id'])
+    maturity_score = calculate_maturity_score(dimension_scores)
+    
+    # Get product info
+    product = Product.query.get_or_404(product_id)
+    
+    return render_template('product_results.html', 
+                         responses=resps, 
+                         lead_comments=lead_comments,
+                         dimension_scores=dimension_scores,
+                         maturity_score=maturity_score,
+                         product=product)
 
 @app.route('/client/comments')
 @login_required('client')
@@ -1128,17 +1245,18 @@ def client_reply_comment(comment_id):
             filename = secure_filename(evidence_file.filename)
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"{timestamp}_{filename}"
-            evidence_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            os.makedirs(os.path.dirname(evidence_path), exist_ok=True)
-            evidence_file.save(evidence_path)
+            evidence_path = os.path.join('static', 'uploads', filename)
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            evidence_file.save(full_path)
 
-        # Create a reply comment
+        # Create a reply comment with evidence information
         reply_comment = LeadComment(
             response_id=parent_comment.response_id,
             lead_id=parent_comment.lead_id,  # Send back to the original lead
             client_id=session['user_id'],
             product_id=parent_comment.product_id,
-            comment=reply_text,  # Remove the "Client Reply:" prefix for cleaner display
+            comment=reply_text + (f"\n[Evidence File: {evidence_file.filename}]" if evidence_path else ""),
             status='client_reply',
             parent_comment_id=comment_id
         )
@@ -1150,9 +1268,11 @@ def client_reply_comment(comment_id):
             if original_response:
                 original_response.evidence_path = evidence_path
                 original_response.client_comment = reply_text
+                # Reset needs_client_response flag when they respond with evidence
+                original_response.needs_client_response = False
 
         db.session.commit()
-        flash('Reply sent to lead successfully.')
+        flash('Reply sent to lead successfully.' + (' Evidence file uploaded.' if evidence_path else ''))
 
     return redirect(request.referrer or url_for('client_comments'))
 

@@ -13,13 +13,13 @@
 <!-- Key Metrics Dashboard -->
 <div class="row mb-4">
     <div class="col-md-3 col-sm-6 mb-3">
-        <div class="metric-card">
+        <div class="metric-card maturity-score-card">
             <div class="metric-icon">
-                <i class="bi bi-trophy"></i>
+                <i class="bi bi-award-fill"></i>
             </div>
             <div class="metric-content">
-                <h3 class="metric-value" id="overallScore">-</h3>
-                <p class="metric-label">Overall Score</p>
+                <h3 class="metric-value">{{ maturity_score }}/5</h3>
+                <p class="metric-label">MATURITY SCORE</p>
             </div>
         </div>
     </div>
@@ -40,7 +40,7 @@
                 <i class="bi bi-layers"></i>
             </div>
             <div class="metric-content">
-                <h3 class="metric-value" id="sectionsCount">-</h3>
+                <h3 class="metric-value">{{ dimension_scores|length }}</h3>
                 <p class="metric-label">Security Dimensions</p>
             </div>
         </div>
@@ -48,15 +48,48 @@
     <div class="col-md-3 col-sm-6 mb-3">
         <div class="metric-card">
             <div class="metric-icon">
-                <i class="bi bi-percent"></i>
+                <i class="bi bi-graph-up"></i>
             </div>
             <div class="metric-content">
-                <h3 class="metric-value" id="completionRate">-</h3>
-                <p class="metric-label">Completion Rate</p>
+                <h3 class="metric-value">{{ "%.1f"|format((dimension_scores.values()|map(attribute='average_score')|sum / dimension_scores|length) if dimension_scores else 0) }}</h3>
+                <p class="metric-label">Average Score</p>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Dimension Scores Overview -->
+{% if dimension_scores %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Dimension-wise Scores
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for dimension, score_data in dimension_scores.items() %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="dimension-score-card">
+                            <div class="dimension-name">{{ dimension }}</div>
+                            <div class="dimension-score">{{ score_data.average_score }}/5</div>
+                            <div class="dimension-details">
+                                <small class="text-muted">
+                                    {{ score_data.question_count }} questions • 
+                                    Total: {{ score_data.total_score }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Security Dimensions Results -->
 <div class="results-container">

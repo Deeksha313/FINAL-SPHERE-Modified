@@ -3081,6 +3081,110 @@ h6 { font-size: 0.825rem; font-weight: 600; }
     50% { opacity: 0.7; }
 }
 
+/* Review Modal Status Cards */
+.status-card {
+    position: relative;
+}
+
+.status-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.status-card-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    min-width: 120px;
+    background: white;
+}
+
+.status-card-label:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,123,255,0.2);
+}
+
+.status-card input[type="radio"]:checked + .status-card-label {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+    box-shadow: 0 0 15px rgba(0,123,255,0.3);
+}
+
+.status-card-label i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.status-card-label span {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Maturity Score Card */
+.maturity-score-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.maturity-score-card .metric-icon i {
+    color: white;
+}
+
+.maturity-score-card .metric-value {
+    color: white;
+    font-weight: bold;
+}
+
+.maturity-score-card .metric-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* Dimension Score Cards */
+.dimension-score-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.dimension-score-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.dimension-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.dimension-score {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 0.25rem;
+}
+
+.dimension-details {
+    margin-top: 0.5rem;
+}
+
 /* Beautiful Table Enhancements */
 .table-hover tbody tr:hover {
     background: linear-gradient(90deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.02));
