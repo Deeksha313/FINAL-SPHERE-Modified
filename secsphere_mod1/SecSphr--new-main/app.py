@@ -1276,6 +1276,52 @@ def client_reply_comment(comment_id):
 
     return redirect(request.referrer or url_for('client_comments'))
 
+@app.route('/api/maturity-heatmap/<int:product_id>')
+@login_required('client')
+def api_maturity_heatmap(product_id):
+    """API endpoint to get maturity heatmap data for a product"""
+    product = Product.query.get_or_404(product_id)
+    if product.owner_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Calculate dimension scores and maturity score
+    dimension_scores = calculate_dimension_scores(product_id, session['user_id'])
+    maturity_score = calculate_maturity_score(dimension_scores)
+    
+    # Prepare heatmap data
+    heatmap_data = {
+        'product_id': product_id,
+        'product_name': product.name,
+        'overall_maturity_score': maturity_score,
+        'overall_maturity_level': get_maturity_level_name(maturity_score),
+        'dimensions': []
+    }
+    
+    for dimension, score_data in dimension_scores.items():
+        level = round(score_data['average_score'])
+        heatmap_data['dimensions'].append({
+            'name': dimension,
+            'score': score_data['average_score'],
+            'level': level,
+            'level_name': get_maturity_level_name(level),
+            'question_count': score_data['question_count'],
+            'total_score': score_data['total_score']
+        })
+    
+    return jsonify(heatmap_data)
+
+def get_maturity_level_name(level):
+    """Get the name for a maturity level"""
+    level_names = {
+        0: 'Not Assessed',
+        1: 'Initial',
+        2: 'Developing', 
+        3: 'Defined',
+        4: 'Managed',
+        5: 'Optimized'
+    }
+    return level_names.get(level, 'Unknown')
+
 @app.route('/lead/comments')
 @login_required('lead')
 def lead_comments():
