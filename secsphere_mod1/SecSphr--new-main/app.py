@@ -348,37 +348,166 @@ def send_invitation_email(email, role, invitation_link, inviter_name):
 
 def load_questionnaire():
     sections = {}
-    with open('devweb.csv', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        current_dimension = None
-        current_question_obj = None
-        for row in reader:
-            dimension = row['Dimensions'].strip()
-            question = row['Questions'].strip()
-            description = row['Description'].strip()
-            option = row['Options'].strip()
-            # New dimension starts
-            if dimension:
-                current_dimension = dimension
-                if current_dimension not in sections:
-                    sections[current_dimension] = []
-            # New question starts
-            if question:
-                # Save previous question to section (if exists)
-                if current_question_obj:
-                    sections[current_dimension].append(current_question_obj)
-                current_question_obj = {
-                    'question': question,
-                    'description': description,
-                    'options': []
-                }
-            # Add option to current question
-            if current_question_obj is not None and option:
-                current_question_obj['options'].append(option)
-        # Add last question
-        if current_question_obj:
-            sections[current_dimension].append(current_question_obj)
-    return sections
+    # Try different file paths and encodings
+    possible_paths = [
+        'static/devweb.csv',
+        'devweb.csv',
+        os.path.join('static', 'devweb.csv'),
+        os.path.join(os.path.dirname(__file__), 'static', 'devweb.csv'),
+        os.path.join(os.path.dirname(__file__), 'devweb.csv')
+    ]
+    
+    possible_encodings = ['utf-8', 'utf-8-sig', 'latin1', 'cp1252', 'iso-8859-1']
+    
+    csv_file = None
+    encoding_used = None
+    
+    # Try to find the file with different paths and encodings
+    for file_path in possible_paths:
+        if os.path.exists(file_path):
+            for encoding in possible_encodings:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        # Test if we can read the first line
+                        first_line = f.readline()
+                        f.seek(0)  # Reset file pointer
+                        reader = csv.DictReader(f)
+                        # Test if we can read the header
+                        fieldnames = reader.fieldnames
+                        if fieldnames and 'Dimensions' in fieldnames:
+                            csv_file = file_path
+                            encoding_used = encoding
+                            break
+                except (UnicodeDecodeError, UnicodeError):
+                    continue
+            if csv_file:
+                break
+    
+    if not csv_file:
+        print("Warning: CSV file not found or unreadable. Using fallback questionnaire.")
+        return get_fallback_questionnaire()
+    
+    try:
+        with open(csv_file, 'r', encoding=encoding_used) as f:
+            reader = csv.DictReader(f)
+            current_dimension = None
+            current_question_obj = None
+            
+            for row in reader:
+                try:
+                    dimension = row.get('Dimensions', '').strip()
+                    question = row.get('Questions', '').strip()
+                    description = row.get('Description', '').strip()
+                    option = row.get('Options', '').strip()
+                    
+                    # New dimension starts
+                    if dimension:
+                        current_dimension = dimension
+                        if current_dimension not in sections:
+                            sections[current_dimension] = []
+                    
+                    # New question starts
+                    if question:
+                        # Save previous question to section (if exists)
+                        if current_question_obj:
+                            sections[current_dimension].append(current_question_obj)
+                        current_question_obj = {
+                            'question': question,
+                            'description': description,
+                            'options': []
+                        }
+                    
+                    # Add option to current question
+                    if current_question_obj is not None and option:
+                        current_question_obj['options'].append(option)
+                        
+                except KeyError as e:
+                    print(f"Warning: Missing column in CSV: {e}")
+                    continue
+                except Exception as e:
+                    print(f"Warning: Error processing row: {e}")
+                    continue
+            
+            # Add last question
+            if current_question_obj:
+                sections[current_dimension].append(current_question_obj)
+                
+        print(f"Successfully loaded questionnaire from {csv_file} using {encoding_used} encoding")
+        return sections
+        
+    except Exception as e:
+        print(f"Error loading CSV file: {e}")
+        return get_fallback_questionnaire()
+
+def get_fallback_questionnaire():
+    """Fallback questionnaire in case CSV file cannot be loaded"""
+    return {
+        "Build and Deployment": [
+            {
+                "question": "Do you have a defined and documented build and deployment process?",
+                "description": "A build process defines how source code is compiled, tested, and packaged.",
+                "options": [
+                    "A) No defined process; builds and deployment are manual or ad hoc.",
+                    "B) Some projects have defined processes, but these are undocumented and inconsistent.",
+                    "C) A documented process exists but lacks adoption in all teams.",
+                    "D) All teams follow a consistent, well-documented process.",
+                    "E) Processes are optimized, automated, and integrated with CI/CD."
+                ]
+            }
+        ],
+        "Information Gathering": [
+            {
+                "question": "Do you perform threat modeling or security risk assessments?",
+                "description": "Systematic approach to identifying and evaluating security threats.",
+                "options": [
+                    "A) No formal threat modeling or risk assessment is performed.",
+                    "B) Ad hoc security considerations without formal process.",
+                    "C) Basic threat modeling performed for some projects.",
+                    "D) Comprehensive threat modeling for all major projects.",
+                    "E) Advanced threat modeling integrated into development lifecycle."
+                ]
+            }
+        ],
+        "Implementation": [
+            {
+                "question": "Do you follow secure coding practices?",
+                "description": "Implementation of security-focused programming practices.",
+                "options": [
+                    "A) No formal secure coding practices.",
+                    "B) Basic awareness but inconsistent application.",
+                    "C) Documented guidelines with some enforcement.",
+                    "D) Well-established practices with regular training.",
+                    "E) Advanced secure coding with automated enforcement."
+                ]
+            }
+        ],
+        "Test and Verification": [
+            {
+                "question": "Do you perform security testing?",
+                "description": "Systematic testing to identify security vulnerabilities.",
+                "options": [
+                    "A) No dedicated security testing.",
+                    "B) Basic manual security checks.",
+                    "C) Some automated security testing tools.",
+                    "D) Comprehensive security testing program.",
+                    "E) Advanced testing with continuous security validation."
+                ]
+            }
+        ],
+        "Response": [
+            {
+                "question": "Do you have an incident response plan?",
+                "description": "Documented procedures for handling security incidents.",
+                "options": [
+                    "A) No formal incident response plan.",
+                    "B) Basic informal response procedures.",
+                    "C) Documented plan with limited testing.",
+                    "D) Well-tested incident response procedures.",
+                    "E) Advanced response capabilities with regular drills."
+                ]
+            }
+        ]
+    }
 
 # Load questionnaire data
 QUESTIONNAIRE = load_questionnaire()
@@ -457,69 +586,123 @@ def fix_naive_datetimes():
 
 def get_csv_score_for_answer(dimension, question, answer):
     """Get score from CSV for a specific dimension, question, and answer"""
-    try:
-        with open('static/devweb.csv', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            current_dimension = None
-            current_question = None
-            
-            for row in reader:
-                dim = row['Dimensions'].strip()
-                q = row['Questions'].strip()
-                option = row['Options'].strip()
-                score_text = row.get('Scores', '').strip()
-                
-                if dim:
-                    current_dimension = dim
-                if q:
-                    current_question = q
-                    
-                # Check if we found the right combination
-                if (current_dimension == dimension and 
-                    current_question == question and 
-                    option == answer and score_text):
-                    try:
-                        return int(score_text)
-                    except (ValueError, TypeError):
-                        pass
-                        
-    except FileNotFoundError:
-        print("CSV file not found")
+    # Try different file paths and encodings
+    possible_paths = [
+        'static/devweb.csv',
+        'devweb.csv',
+        os.path.join('static', 'devweb.csv'),
+        os.path.join(os.path.dirname(__file__), 'static', 'devweb.csv'),
+        os.path.join(os.path.dirname(__file__), 'devweb.csv')
+    ]
     
-    return None
+    possible_encodings = ['utf-8', 'utf-8-sig', 'latin1', 'cp1252', 'iso-8859-1']
+    
+    for file_path in possible_paths:
+        if os.path.exists(file_path):
+            for encoding in possible_encodings:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        reader = csv.DictReader(f)
+                        current_dimension = None
+                        current_question = None
+                        
+                        for row in reader:
+                            try:
+                                dim = row.get('Dimensions', '').strip()
+                                q = row.get('Questions', '').strip()
+                                option = row.get('Options', '').strip()
+                                score_text = row.get('Scores', '').strip()
+                                
+                                if dim:
+                                    current_dimension = dim
+                                if q:
+                                    current_question = q
+                                    
+                                # Check if we found the right combination
+                                if (current_dimension == dimension and 
+                                    current_question == question and 
+                                    option == answer and score_text):
+                                    try:
+                                        return int(score_text)
+                                    except (ValueError, TypeError):
+                                        pass
+                            except Exception:
+                                continue
+                                        
+                    # If we got here, we successfully read the file but didn't find the answer
+                    break
+                except (UnicodeDecodeError, UnicodeError):
+                    continue
+            if encoding:
+                break
+    
+    # Default scoring based on option letter if CSV parsing fails
+    if answer.startswith('A)'):
+        return 1
+    elif answer.startswith('B)'):
+        return 2
+    elif answer.startswith('C)'):
+        return 3
+    elif answer.startswith('D)'):
+        return 4
+    elif answer.startswith('E)'):
+        return 5
+    else:
+        return 1  # Default minimum score
 
 def calculate_score_for_answer(question, answer):
     """Calculate score for a specific question-answer pair based on CSV data"""
-    try:
-        with open('static/devweb.csv', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            current_question = None
-            question_scores = {}
+    # Try different file paths and encodings
+    possible_paths = [
+        'static/devweb.csv',
+        'devweb.csv',
+        os.path.join('static', 'devweb.csv'),
+        os.path.join(os.path.dirname(__file__), 'static', 'devweb.csv'),
+        os.path.join(os.path.dirname(__file__), 'devweb.csv')
+    ]
+    
+    possible_encodings = ['utf-8', 'utf-8-sig', 'latin1', 'cp1252', 'iso-8859-1']
+    
+    for file_path in possible_paths:
+        if os.path.exists(file_path):
+            for encoding in possible_encodings:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        reader = csv.DictReader(f)
+                        current_question = None
+                        question_scores = {}
 
-            for row in reader:
-                q = row['Questions'].strip()
-                option = row['Options'].strip()
-                scores_text = row.get('Scores', '').strip()
+                        for row in reader:
+                            try:
+                                q = row.get('Questions', '').strip()
+                                option = row.get('Options', '').strip()
+                                scores_text = row.get('Scores', '').strip()
 
-                # Track current question
-                if q:
-                    current_question = q
-                    question_scores = {}
+                                # Track current question
+                                if q:
+                                    current_question = q
+                                    question_scores = {}
 
-                # Store score for each option of current question
-                if current_question and option and scores_text:
-                    try:
-                        score = int(scores_text)
-                        question_scores[option] = score
-                    except (ValueError, TypeError):
-                        pass
+                                # Store score for each option of current question
+                                if current_question and option and scores_text:
+                                    try:
+                                        score = int(scores_text)
+                                        question_scores[option] = score
+                                    except (ValueError, TypeError):
+                                        pass
 
-                # Check if we found a match for our question and answer
-                if current_question == question and answer in question_scores:
-                    return question_scores[answer] * 20  # Scale 1-5 to 20-100 scoring system
+                                # Check if we found a match for our question and answer
+                                if current_question == question and answer in question_scores:
+                                    return question_scores[answer] * 20  # Scale 1-5 to 20-100 scoring system
+                            except Exception:
+                                continue
 
-    except FileNotFoundError:
-        print("CSV file not found, using default scoring")
+                    # If we got here, we successfully read the file but didn't find the answer
+                    break
+                except (UnicodeDecodeError, UnicodeError):
+                    continue
+            if encoding:
+                break
 
     # Default scoring based on option letter if CSV parsing fails
     if answer.startswith('A)'):
