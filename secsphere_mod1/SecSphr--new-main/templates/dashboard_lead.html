@@ -31,7 +31,11 @@
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-8">
-                    <h3 class="mb-0">{% set total_products = 0 %}{% for client_id, client_data in clients_data.items() %}{% set total_products = total_products + client_data.products|length %}{% endfor %}{{ total_products }}</h3>
+                    {% set total_products = 0 %}
+                    {% for client_id, client_data in clients_data.items() %}
+                        {% set total_products = total_products + client_data.products|length %}
+                    {% endfor %}
+                    <h3 class="mb-0">{{ total_products }}</h3>
                     <p class="mb-0">Total Products</p>
                 </div>
                 <div class="col-4">
@@ -45,7 +49,13 @@
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-8">
-                    <h3 class="mb-0">{% set total_responses = 0 %}{% for client_id, client_data in clients_data.items() %}{% for product_id, product_data in client_data.products.items() %}{% set total_responses = total_responses + product_data.responses|length %}{% endfor %}{% endfor %}{{ total_responses }}</h3>
+                    {% set total_responses = 0 %}
+                    {% for client_id, client_data in clients_data.items() %}
+                        {% for product_id, product_data in client_data.products.items() %}
+                            {% set total_responses = total_responses + product_data.responses|length %}
+                        {% endfor %}
+                    {% endfor %}
+                    <h3 class="mb-0">{{ total_responses }}</h3>
                     <p class="mb-0">Total Responses</p>
                 </div>
                 <div class="col-4">
@@ -268,7 +278,7 @@
                                                                 </td>
                                                                 <td>
                                                                     <button type="button" class="btn btn-outline-primary btn-sm"
-                                                                            onclick="openReviewModal({{ resp.id }}, '{{ resp.section }}', '{{ resp.question|escape }}', '{{ resp.answer|escape }}', '{{ resp.client_comment|escape }}', '{{ resp.evidence_path|escape }}')">
+                                                                            onclick="openReviewModal({{ resp.id }}, {{ resp.section|tojson }}, {{ resp.question|tojson }}, {{ resp.answer|tojson }}, {{ resp.client_comment|default('')|tojson }}, {{ resp.evidence_path|default('')|tojson }})">
                                                                         <i class="bi bi-pencil-square me-1"></i>Review
                                                                     </button>
                                                                 </td>

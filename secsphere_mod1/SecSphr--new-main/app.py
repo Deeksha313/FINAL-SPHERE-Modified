@@ -1256,7 +1256,7 @@ def client_reply_comment(comment_id):
             lead_id=parent_comment.lead_id,  # Send back to the original lead
             client_id=session['user_id'],
             product_id=parent_comment.product_id,
-            comment=reply_text + (f"\n[Evidence File: {evidence_file.filename}]" if evidence_path else ""),
+            comment=reply_text + (f"\n[Evidence File: {evidence_file.filename}]" if evidence_path and evidence_file and evidence_file.filename else ""),
             status='client_reply',
             parent_comment_id=comment_id
         )
