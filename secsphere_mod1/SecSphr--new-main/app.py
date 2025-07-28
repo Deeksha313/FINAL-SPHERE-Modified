@@ -2422,6 +2422,25 @@ def revoke_invitation(invitation_id):
     flash('Invitation revoked successfully.')
     return redirect(url_for('manage_users'))
 
+@app.route('/static/uploads/<filename>')
+@login_required()
+def uploaded_file(filename):
+    """Serve uploaded evidence files with authentication"""
+    from flask import send_from_directory
+    import os
+    upload_folder = app.config['UPLOAD_FOLDER']
+    file_path = os.path.join(upload_folder, filename)
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        flash('File not found.')
+        return redirect(url_for('dashboard'))
+    
+    # Additional security: Check if user has access to this file
+    # You can add more specific access control here if needed
+    
+    return send_from_directory(upload_folder, filename)
+
 if __name__ == '__main__':
     print("🚀 Starting SecureSphere Application")
     print("Initializing database...")
