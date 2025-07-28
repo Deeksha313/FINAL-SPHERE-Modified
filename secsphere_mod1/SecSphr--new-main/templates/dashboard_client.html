@@ -84,81 +84,555 @@
 {% if products and products|selectattr('maturity_score', 'greaterthan', 0)|list %}
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card dashboard-card">
-            <div class="card-header">
+        <div class="card dashboard-card shadow-lg border-0">
+            <div class="card-header bg-gradient-primary text-white">
                 <h5 class="mb-0">
                     <i class="bi bi-grid-3x3-gap me-2"></i>Security Maturity Overview
                 </h5>
-                <small class="text-muted">Quick visual overview of your products' security maturity levels</small>
+                <small class="opacity-75">Visual overview of your products' security maturity levels with risk assessment</small>
             </div>
             <div class="card-body">
-                <div class="row">
-                    {% for product in products %}
-                        {% if product.maturity_score > 0 %}
-                        <div class="col-md-6 col-lg-4 col-xl-3 mb-3">
-                            <div class="maturity-overview-card level-{{ product.maturity_score }} {% if product.status == 'completed' or product.completed_sections == product.total_sections %}marked{% endif %}">
-                                <div class="overview-header">
-                                    <h6 class="product-name">{{ product.name }}</h6>
-                                    <span class="maturity-badge">Level {{ product.maturity_score }}</span>
-                                </div>
-                                <div class="overview-body">
-                                    <div class="maturity-circle level-{{ product.maturity_score }}">
-                                        <span class="level-num">{{ product.maturity_score }}</span>
-                                    </div>
-                                    <div class="overview-stats">
-                                        <small class="text-muted">
-                                            {{ product.completed_sections }}/{{ product.total_sections }} sections
-                                        </small>
-                                    </div>
-                                </div>
-                                <div class="overview-actions">
-                                    <a href="{{ url_for('product_results', product_id=product.id) }}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye me-1"></i>View Details
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                
-                <!-- Overall Statistics -->
+                <!-- Overall Statistics Header -->
                 {% set assessed_products = products|selectattr('maturity_score', 'greaterthan', 0)|list %}
-                {% if assessed_products|length > 1 %}
-                <div class="overall-stats mt-4 pt-3 border-top">
+                <div class="overview-stats-header mb-4">
                     <div class="row text-center">
                         <div class="col-md-3">
-                            <div class="stat-item">
-                                <h5 class="stat-value">{{ assessed_products|length }}</h5>
-                                <p class="stat-label">Assessed Products</p>
+                            <div class="stat-overview-item">
+                                <div class="stat-value text-primary">{{ assessed_products|length }}</div>
+                                <div class="stat-label">Assessed Products</div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="stat-item">
-                                <h5 class="stat-value">{{ "%.1f"|format((assessed_products|map(attribute='maturity_score')|sum / assessed_products|length)) }}</h5>
-                                <p class="stat-label">Average Maturity</p>
+                            <div class="stat-overview-item">
+                                <div class="stat-value text-info">{{ "%.1f"|format((assessed_products|map(attribute='maturity_score')|sum / assessed_products|length)) }}</div>
+                                <div class="stat-label">Average Maturity</div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="stat-item">
-                                <h5 class="stat-value">{{ assessed_products|map(attribute='maturity_score')|max }}</h5>
-                                <p class="stat-label">Highest Level</p>
+                            <div class="stat-overview-item">
+                                <div class="stat-value text-success">{{ assessed_products|map(attribute='maturity_score')|max }}</div>
+                                <div class="stat-label">Highest Level</div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="stat-item">
-                                <h5 class="stat-value">{{ assessed_products|selectattr('maturity_score', 'equalto', 5)|list|length }}</h5>
-                                <p class="stat-label">Optimized Products</p>
+                            <div class="stat-overview-item">
+                                <div class="stat-value text-warning">{{ assessed_products|selectattr('maturity_score', 'equalto', 5)|list|length }}</div>
+                                <div class="stat-label">Optimized Products</div>
                             </div>
                         </div>
                     </div>
                 </div>
-                {% endif %}
+
+                <!-- Enhanced Product Maturity Grid -->
+                <div class="product-maturity-grid">
+                    <div class="row g-3">
+                        {% for product in products %}
+                            {% if product.maturity_score > 0 %}
+                            <div class="col-md-6 col-lg-4 col-xl-3">
+                                <div class="product-maturity-card level-{{ product.maturity_score }} {% if product.status == 'completed' or product.completed_sections == product.total_sections %}completed{% endif %}"
+                                     onclick="showProductMaturityDetails({{ product.id }}, '{{ product.name|escape }}', {{ product.maturity_score }}, {{ product.dimension_scores|tojson|escape }})">
+                                    
+                                    <!-- Product Header -->
+                                    <div class="card-header-custom">
+                                        <div class="product-info">
+                                            <h6 class="product-name">{{ product.name }}</h6>
+                                            <span class="completion-status">
+                                                {{ product.completed_sections }}/{{ product.total_sections }} sections
+                                            </span>
+                                        </div>
+                                        <div class="maturity-indicator">
+                                            <span class="maturity-badge level-{{ product.maturity_score }}">
+                                                Level {{ product.maturity_score }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Maturity Visual -->
+                                    <div class="maturity-visual">
+                                        <div class="maturity-circle level-{{ product.maturity_score }}">
+                                            <div class="circle-inner">
+                                                <span class="level-number">{{ product.maturity_score }}</span>
+                                                <span class="level-text">
+                                                    {% if product.maturity_score == 1 %}Initial
+                                                    {% elif product.maturity_score == 2 %}Developing
+                                                    {% elif product.maturity_score == 3 %}Defined
+                                                    {% elif product.maturity_score == 4 %}Managed
+                                                    {% elif product.maturity_score == 5 %}Optimized
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Risk Assessment -->
+                                    <div class="risk-assessment">
+                                        {% set risk_score = (5 - product.maturity_score) * product.maturity_score %}
+                                        {% if risk_score >= 15 %}
+                                            <span class="risk-indicator high">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> High Risk
+                                            </span>
+                                        {% elif risk_score >= 10 %}
+                                            <span class="risk-indicator medium">
+                                                <i class="bi bi-exclamation-circle"></i> Medium Risk
+                                            </span>
+                                        {% elif risk_score >= 5 %}
+                                            <span class="risk-indicator low-medium">
+                                                <i class="bi bi-info-circle"></i> Low-Medium Risk
+                                            </span>
+                                        {% else %}
+                                            <span class="risk-indicator low">
+                                                <i class="bi bi-check-circle"></i> Low Risk
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Quick Dimension Overview -->
+                                    {% if product.dimension_scores %}
+                                    <div class="dimension-overview">
+                                        <div class="mini-heatmap">
+                                            {% for dimension, score_data in product.dimension_scores.items() %}
+                                            <div class="mini-cell level-{{ score_data.average_score|round|int }}" 
+                                                 title="{{ dimension }}: {{ score_data.average_score }}/5">
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Action Buttons -->
+                                    <div class="card-actions">
+                                        <a href="{{ url_for('product_results', product_id=product.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye me-1"></i>View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Maturity Level Legend -->
+                <div class="maturity-legend mt-4">
+                    <h6 class="text-muted mb-3">Maturity Levels Guide</h6>
+                    <div class="row">
+                        <div class="col-md-2 col-6 mb-2">
+                            <div class="legend-item level-1">
+                                <span class="legend-color"></span>
+                                <div class="legend-info">
+                                    <span class="legend-title">Level 1</span>
+                                    <small class="legend-desc">Initial</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-2">
+                            <div class="legend-item level-2">
+                                <span class="legend-color"></span>
+                                <div class="legend-info">
+                                    <span class="legend-title">Level 2</span>
+                                    <small class="legend-desc">Developing</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-2">
+                            <div class="legend-item level-3">
+                                <span class="legend-color"></span>
+                                <div class="legend-info">
+                                    <span class="legend-title">Level 3</span>
+                                    <small class="legend-desc">Defined</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-2">
+                            <div class="legend-item level-4">
+                                <span class="legend-color"></span>
+                                <div class="legend-info">
+                                    <span class="legend-title">Level 4</span>
+                                    <small class="legend-desc">Managed</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-2">
+                            <div class="legend-item level-5">
+                                <span class="legend-color"></span>
+                                <div class="legend-info">
+                                    <span class="legend-title">Level 5</span>
+                                    <small class="legend-desc">Optimized</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Product Maturity Details Modal -->
+<div class="modal fade" id="productMaturityModal" tabindex="-1" aria-labelledby="productMaturityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="productMaturityModalLabel">
+                    <i class="bi bi-grid-3x3-gap me-2"></i>Product Maturity Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <div class="modal-maturity-circle" id="modalMaturityCircle">
+                                <div class="circle-inner">
+                                    <span class="level-number" id="modalLevelNumber"></span>
+                                    <span class="level-text" id="modalLevelText"></span>
+                                </div>
+                            </div>
+                            <h5 id="modalProductName" class="mt-3"></h5>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="dimension-details" id="modalDimensionDetails">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="viewFullResultsBtn">
+                    <i class="bi bi-eye me-1"></i>View Full Results
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Enhanced Maturity Overview Styles */
+.overview-stats-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+}
+
+.stat-overview-item {
+    text-align: center;
+}
+
+.stat-overview-item .stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.stat-overview-item .stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.product-maturity-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.product-maturity-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #e5e7eb;
+    transition: background 0.3s ease;
+}
+
+.product-maturity-card.level-1::before { background: #ef4444; }
+.product-maturity-card.level-2::before { background: #f59e0b; }
+.product-maturity-card.level-3::before { background: #eab308; }
+.product-maturity-card.level-4::before { background: #22c55e; }
+.product-maturity-card.level-5::before { background: #10b981; }
+
+.product-maturity-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+.product-maturity-card.level-1:hover { border-color: #ef4444; }
+.product-maturity-card.level-2:hover { border-color: #f59e0b; }
+.product-maturity-card.level-3:hover { border-color: #eab308; }
+.product-maturity-card.level-4:hover { border-color: #22c55e; }
+.product-maturity-card.level-5:hover { border-color: #10b981; }
+
+.card-header-custom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding-top: 8px;
+}
+
+.product-name {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+}
+
+.completion-status {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.maturity-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.maturity-badge.level-1 { background: #fef2f2; color: #dc2626; }
+.maturity-badge.level-2 { background: #fffbeb; color: #d97706; }
+.maturity-badge.level-3 { background: #fefce8; color: #ca8a04; }
+.maturity-badge.level-4 { background: #f0fdf4; color: #16a34a; }
+.maturity-badge.level-5 { background: #ecfdf5; color: #059669; }
+
+.maturity-visual {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.maturity-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border: 3px solid;
+}
+
+.maturity-circle.level-1 { border-color: #ef4444; background: linear-gradient(135deg, #fef2f2, #fee2e2); }
+.maturity-circle.level-2 { border-color: #f59e0b; background: linear-gradient(135deg, #fffbeb, #fef3c7); }
+.maturity-circle.level-3 { border-color: #eab308; background: linear-gradient(135deg, #fefce8, #fef08a); }
+.maturity-circle.level-4 { border-color: #22c55e; background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
+.maturity-circle.level-5 { border-color: #10b981; background: linear-gradient(135deg, #ecfdf5, #d1fae5); }
+
+.circle-inner {
+    text-align: center;
+}
+
+.level-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1f2937;
+    line-height: 1;
+}
+
+.level-text {
+    font-size: 0.65rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.risk-assessment {
+    text-align: center;
+    margin: 16px 0;
+}
+
+.risk-indicator {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.risk-indicator.high { background: #fef2f2; color: #dc2626; }
+.risk-indicator.medium { background: #fffbeb; color: #d97706; }
+.risk-indicator.low-medium { background: #fefce8; color: #ca8a04; }
+.risk-indicator.low { background: #f0fdf4; color: #16a34a; }
+
+.dimension-overview {
+    margin: 12px 0;
+}
+
+.mini-heatmap {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    flex-wrap: wrap;
+}
+
+.mini-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+.mini-cell.level-1 { background: #ef4444; }
+.mini-cell.level-2 { background: #f59e0b; }
+.mini-cell.level-3 { background: #eab308; }
+.mini-cell.level-4 { background: #22c55e; }
+.mini-cell.level-5 { background: #10b981; }
+
+.mini-cell:hover {
+    transform: scale(1.3);
+}
+
+.card-actions {
+    text-align: center;
+    margin-top: 16px;
+}
+
+.maturity-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+}
+
+.maturity-legend .legend-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.legend-item.level-1 .legend-color { background: #ef4444; }
+.legend-item.level-2 .legend-color { background: #f59e0b; }
+.legend-item.level-3 .legend-color { background: #eab308; }
+.legend-item.level-4 .legend-color { background: #22c55e; }
+.legend-item.level-5 .legend-color { background: #10b981; }
+
+.legend-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.legend-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #1f2937;
+}
+
+.legend-desc {
+    font-size: 0.7rem;
+    color: #6b7280;
+}
+
+/* Modal Styles */
+.modal-maturity-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid;
+}
+
+.modal-maturity-circle .level-number {
+    font-size: 2.5rem;
+}
+
+.modal-maturity-circle .level-text {
+    font-size: 0.8rem;
+}
+
+.dimension-details {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dimension-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border-left: 3px solid #e5e7eb;
+}
+
+.dimension-item.level-1 { border-left-color: #ef4444; }
+.dimension-item.level-2 { border-left-color: #f59e0b; }
+.dimension-item.level-3 { border-left-color: #eab308; }
+.dimension-item.level-4 { border-left-color: #22c55e; }
+.dimension-item.level-5 { border-left-color: #10b981; }
+
+.dimension-name {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.dimension-score {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .product-maturity-card {
+        padding: 16px;
+    }
+    
+    .maturity-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .level-number {
+        font-size: 1.25rem;
+    }
+    
+    .level-text {
+        font-size: 0.6rem;
+    }
+    
+    .overview-stats-header {
+        padding: 16px;
+    }
+    
+    .stat-overview-item .stat-value {
+        font-size: 1.5rem;
+    }
+}
+</style>
 {% endif %}
 
 <!-- Products Section -->
@@ -381,8 +855,93 @@
 </div>
 
 <script>
+let currentProductId = null;
+
 function showHelpModal() {
     new bootstrap.Modal(document.getElementById('helpModal')).show();
+}
+
+function showProductMaturityDetails(productId, productName, maturityScore, dimensionScores) {
+    currentProductId = productId;
+    
+    // Update modal content
+    document.getElementById('modalProductName').textContent = productName;
+    document.getElementById('modalLevelNumber').textContent = maturityScore;
+    
+    // Set level text
+    const levelTexts = {
+        1: 'Initial',
+        2: 'Developing', 
+        3: 'Defined',
+        4: 'Managed',
+        5: 'Optimized'
+    };
+    document.getElementById('modalLevelText').textContent = levelTexts[maturityScore] || 'Unknown';
+    
+    // Update circle styling
+    const modalCircle = document.getElementById('modalMaturityCircle');
+    modalCircle.className = `modal-maturity-circle level-${maturityScore}`;
+    modalCircle.style.borderColor = getLevelColor(maturityScore);
+    modalCircle.style.background = getLevelGradient(maturityScore);
+    
+    // Populate dimension details
+    const dimensionDetailsContainer = document.getElementById('modalDimensionDetails');
+    let dimensionHTML = '<h6 class="mb-3">Dimension Breakdown</h6>';
+    
+    if (typeof dimensionScores === 'string') {
+        try {
+            dimensionScores = JSON.parse(dimensionScores);
+        } catch (e) {
+            console.error('Error parsing dimension scores:', e);
+            dimensionScores = {};
+        }
+    }
+    
+    if (dimensionScores && Object.keys(dimensionScores).length > 0) {
+        for (const [dimension, scoreData] of Object.entries(dimensionScores)) {
+            const level = Math.round(scoreData.average_score);
+            dimensionHTML += `
+                <div class="dimension-item level-${level}">
+                    <div class="dimension-name">${dimension}</div>
+                    <div class="dimension-score">${scoreData.average_score}/5</div>
+                </div>
+            `;
+        }
+    } else {
+        dimensionHTML += '<p class="text-muted">No dimension data available</p>';
+    }
+    
+    dimensionDetailsContainer.innerHTML = dimensionHTML;
+    
+    // Update view results button
+    document.getElementById('viewFullResultsBtn').onclick = function() {
+        window.location.href = `/product/${currentProductId}/results`;
+    };
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('productMaturityModal')).show();
+}
+
+function getLevelColor(level) {
+    const colors = {
+        1: '#ef4444',
+        2: '#f59e0b', 
+        3: '#eab308',
+        4: '#22c55e',
+        5: '#10b981'
+    };
+    return colors[level] || '#6b7280';
+}
+
+function getLevelGradient(level) {
+    const gradients = {
+        1: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
+        2: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+        3: 'linear-gradient(135deg, #fefce8, #fef08a)',
+        4: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+        5: 'linear-gradient(135deg, #ecfdf5, #d1fae5)'
+    };
+    return gradients[level] || 'linear-gradient(135deg, #f8fafc, #e2e8f0)';
 }
 
 // Add animation to stats cards
@@ -404,6 +963,23 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.transform = 'translateY(0)';
         });
     });
+    
+    // Initialize tooltips for mini-cells
+    const miniCells = document.querySelectorAll('.mini-cell');
+    miniCells.forEach(cell => {
+        if (cell.hasAttribute('title')) {
+            cell.setAttribute('data-bs-toggle', 'tooltip');
+            cell.setAttribute('data-bs-placement', 'top');
+        }
+    });
+    
+    // Initialize Bootstrap tooltips
+    if (typeof bootstrap !== 'undefined') {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
 });
 </script>
 {% endblock %}
