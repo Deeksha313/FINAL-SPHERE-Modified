@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="chat-container">
-    <!-- Chat Header -->
+    <!-- Enhanced Chat Header -->
     <div class="chat-header">
         <div class="d-flex align-items-center">
             <div class="chat-avatar">
@@ -16,7 +16,13 @@
             </div>
         </div>
         <div class="chat-actions">
-            <span class="badge bg-light text-dark">{{ comments|length }} conversations</span>
+            <span class="badge bg-light text-dark me-2">{{ comments|length }} conversations</span>
+            <button class="btn btn-outline-light btn-sm" onclick="toggleNotifications()" title="Toggle notifications">
+                <i class="bi bi-bell"></i>
+            </button>
+            <button class="btn btn-outline-light btn-sm ms-1" onclick="refreshConversations()" title="Refresh">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
         </div>
     </div>
 
@@ -24,170 +30,285 @@
     <div class="chat-messages" id="chatMessages">
         {% if comments %}
             {% for comment in comments %}
-                <!-- Group messages by conversation -->
-                <div class="message-group mb-4">
+                <!-- Enhanced Message Group -->
+                <div class="message-group mb-4" data-conversation-id="{{ comment.id }}">
                     <!-- Product Context Card -->
                     <div class="product-context-card">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-box-seam text-primary me-2"></i>
-                            <strong>{{ comment.product.name }}</strong>
-                            {% if comment.response %}
-                                <span class="ms-2 text-muted">• Question #{{ loop.index }}</span>
-                            {% endif %}
-                            <span class="ms-auto text-muted">
-                                <i class="bi bi-person-circle me-1"></i>{{ comment.client.username }}
-                            </span>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-box-seam text-primary me-2"></i>
+                                <strong>{{ comment.product.name }}</strong>
+                                {% if comment.response %}
+                                    <span class="ms-2 text-muted">• Question #{{ loop.index }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="context-actions">
+                                <span class="client-badge">
+                                    <i class="bi bi-person-circle me-1"></i>{{ comment.client.username }}
+                                </span>
+                                <span class="timestamp">{{ comment.created_at.strftime('%m/%d %H:%M') }}</span>
+                            </div>
                         </div>
                         {% if comment.response %}
                             <div class="question-preview">
-                                <small class="text-muted">{{ comment.response.question[:100] }}{% if comment.response.question|length > 100 %}...{% endif %}</small>
+                                <div class="question-snippet">
+                                    <i class="bi bi-question-circle me-2"></i>
+                                    <span>{{ comment.response.question[:100] }}{% if comment.response.question|length > 100 %}...{% endif %}</span>
+                                </div>
                             </div>
                         {% endif %}
                     </div>
 
-                    <!-- Lead Message (Original Review) -->
-                    {% if comment.status != 'client_reply' and comment.status != 'lead_reply' %}
-                    <div class="message lead-message">
-                        <div class="message-content">
-                            <div class="message-header">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-person-badge text-primary me-2"></i>
-                                    <strong>You</strong>
-                                    <span class="message-time ms-auto">{{ comment.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
-                                </div>
-                                <div class="message-status">
-                                    <span class="status-badge status-{{ comment.status }}">
-                                        {% if comment.status == 'approved' %}
-                                            <i class="bi bi-check-circle"></i> Approved
-                                        {% elif comment.status == 'needs_revision' %}
-                                            <i class="bi bi-exclamation-triangle"></i> Needs Revision
-                                        {% elif comment.status == 'rejected' %}
-                                            <i class="bi bi-x-circle"></i> Rejected
-                                        {% else %}
-                                            <i class="bi bi-clock"></i> Pending
-                                        {% endif %}
-                                    </span>
-                                </div>
+                    <!-- Messages Thread -->
+                    <div class="messages-thread">
+                        <!-- Lead Message (Original Review) -->
+                        {% if comment.status != 'client_reply' and comment.status != 'lead_reply' %}
+                        <div class="message lead-message">
+                            <div class="message-avatar">
+                                <i class="bi bi-person-badge text-primary"></i>
                             </div>
-                            <div class="message-text">
-                                {{ comment.comment }}
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="sender-info">
+                                            <strong class="sender-name">You</strong>
+                                            <span class="sender-role">(Lead Reviewer)</span>
+                                        </div>
+                                        <div class="message-meta">
+                                            <span class="message-time">{{ comment.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
+                                            <span class="status-badge status-{{ comment.status }}">
+                                                {% if comment.status == 'approved' %}
+                                                    <i class="bi bi-check-circle"></i> Approved
+                                                {% elif comment.status == 'needs_revision' %}
+                                                    <i class="bi bi-exclamation-triangle"></i> Needs Revision
+                                                {% elif comment.status == 'rejected' %}
+                                                    <i class="bi bi-x-circle"></i> Rejected
+                                                {% else %}
+                                                    <i class="bi bi-clock"></i> Pending
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="message-text">
+                                    {{ comment.comment }}
+                                </div>
+                                <div class="message-actions">
+                                    <button class="action-btn" onclick="editMessage({{ comment.id }})" title="Edit message">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="action-btn" onclick="deleteMessage({{ comment.id }})" title="Delete message">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <button class="action-btn" onclick="pinMessage({{ comment.id }})" title="Pin message">
+                                        <i class="bi bi-pin"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- All Replies in Conversation -->
-                    {% set all_replies = comments|selectattr('parent_comment_id', 'equalto', comment.id)|list + comments|selectattr('parent_comment_id', 'in', comments|selectattr('parent_comment_id', 'equalto', comment.id)|map(attribute='id')|list)|list %}
-                    {% for reply in all_replies|sort(attribute='created_at') %}
-                        {% if reply.status == 'client_reply' %}
-                            <div class="message client-message">
-                                <div class="message-content">
-                                    <div class="message-header">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-person-circle text-success me-2"></i>
-                                            <strong>{{ reply.client.username }}</strong>
-                                            <span class="message-time ms-auto">{{ reply.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="message-text">
-                                        {% set comment_lines = reply.comment.split('\n') %}
-                                        {% for line in comment_lines %}
-                                            {% if line.startswith('[Evidence File:') and line.endswith(']') %}
-                                                {% set filename = line[15:-1] %}
-                                                <div class="evidence-attachment mt-2">
-                                                    <a href="{{ url_for('static', filename='uploads/' + filename) }}" target="_blank" 
-                                                       class="btn btn-outline-primary btn-sm">
-                                                        <i class="bi bi-paperclip me-1"></i>{{ filename }}
-                                                    </a>
-                                                </div>
-                                            {% else %}
-                                                {% if line.strip() %}{{ line }}<br>{% endif %}
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% elif reply.status == 'lead_reply' %}
-                            <div class="message lead-message">
-                                <div class="message-content">
-                                    <div class="message-header">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-person-badge text-primary me-2"></i>
-                                            <strong>You</strong>
-                                            <span class="message-time ms-auto">{{ reply.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="message-text">
-                                        {% set comment_lines = reply.comment.split('\n') %}
-                                        {% for line in comment_lines %}
-                                            {% if line.startswith('[Evidence File:') and line.endswith(']') %}
-                                                {% set filename = line[15:-1] %}
-                                                <div class="evidence-attachment mt-2">
-                                                    <a href="{{ url_for('static', filename='uploads/' + filename) }}" target="_blank" 
-                                                       class="btn btn-outline-primary btn-sm">
-                                                        <i class="bi bi-paperclip me-1"></i>{{ filename }}
-                                                    </a>
-                                                </div>
-                                            {% else %}
-                                                {% if line.strip() %}{{ line }}<br>{% endif %}
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
                         {% endif %}
-                    {% endfor %}
 
-                    <!-- Reply Form -->
+                        <!-- All Replies in Conversation -->
+                        {% set all_replies = comments|selectattr('parent_comment_id', 'equalto', comment.id)|list + comments|selectattr('parent_comment_id', 'in', comments|selectattr('parent_comment_id', 'equalto', comment.id)|map(attribute='id')|list)|list %}
+                        {% for reply in all_replies|sort(attribute='created_at') %}
+                            {% if reply.status == 'client_reply' %}
+                                <div class="message client-message">
+                                    <div class="message-avatar">
+                                        <i class="bi bi-person-circle text-success"></i>
+                                    </div>
+                                    <div class="message-content">
+                                        <div class="message-header">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="sender-info">
+                                                    <strong class="sender-name">{{ reply.client.username }}</strong>
+                                                    <span class="sender-role">(Client)</span>
+                                                </div>
+                                                <div class="message-meta">
+                                                    <span class="message-time">{{ reply.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
+                                                    <span class="delivery-status">
+                                                        <i class="bi bi-check2-all text-success"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="message-text">
+                                            {% set comment_lines = reply.comment.split('\n') %}
+                                            {% for line in comment_lines %}
+                                                {% if line.startswith('[Evidence File:') and line.endswith(']') %}
+                                                    {% set filename = line[15:-1] %}
+                                                    <div class="evidence-attachment">
+                                                        <a href="{{ url_for('static', filename='uploads/' + filename) }}" target="_blank" 
+                                                           class="attachment-link">
+                                                            <i class="bi bi-paperclip me-2"></i>
+                                                            <span>{{ filename }}</span>
+                                                            <i class="bi bi-download ms-auto"></i>
+                                                        </a>
+                                                    </div>
+                                                {% else %}
+                                                    {% if line.strip() %}{{ line }}<br>{% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <div class="message-actions">
+                                            <button class="action-btn" onclick="replyToMessage({{ reply.id }})" title="Reply">
+                                                <i class="bi bi-reply"></i>
+                                            </button>
+                                            <button class="action-btn" onclick="reactToMessage({{ reply.id }}, 'like')" title="Like">
+                                                <i class="bi bi-hand-thumbs-up"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif reply.status == 'lead_reply' %}
+                                <div class="message lead-message">
+                                    <div class="message-avatar">
+                                        <i class="bi bi-person-badge text-primary"></i>
+                                    </div>
+                                    <div class="message-content">
+                                        <div class="message-header">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="sender-info">
+                                                    <strong class="sender-name">You</strong>
+                                                    <span class="sender-role">(Lead Reviewer)</span>
+                                                </div>
+                                                <div class="message-meta">
+                                                    <span class="message-time">{{ reply.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
+                                                    <span class="delivery-status">
+                                                        <i class="bi bi-check2-all text-primary"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="message-text">
+                                            {% set comment_lines = reply.comment.split('\n') %}
+                                            {% for line in comment_lines %}
+                                                {% if line.startswith('[Evidence File:') and line.endswith(']') %}
+                                                    {% set filename = line[15:-1] %}
+                                                    <div class="evidence-attachment">
+                                                        <a href="{{ url_for('static', filename='uploads/' + filename) }}" target="_blank" 
+                                                           class="attachment-link">
+                                                            <i class="bi bi-paperclip me-2"></i>
+                                                            <span>{{ filename }}</span>
+                                                            <i class="bi bi-download ms-auto"></i>
+                                                        </a>
+                                                    </div>
+                                                {% else %}
+                                                    {% if line.strip() %}{{ line }}<br>{% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <div class="message-actions">
+                                            <button class="action-btn" onclick="editMessage({{ reply.id }})" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="action-btn" onclick="deleteMessage({{ reply.id }})" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Enhanced Reply Form -->
                     {% set has_client_replies = comments|selectattr('parent_comment_id', 'equalto', comment.id)|selectattr('status', 'equalto', 'client_reply')|list %}
                     {% set has_lead_reply = comments|selectattr('parent_comment_id', 'equalto', comment.id)|selectattr('status', 'equalto', 'lead_reply')|list|length > 0 %}
                     
                     {% if has_client_replies and not has_lead_reply %}
                         <!-- Show reply form if client has replied but lead hasn't replied back -->
-                        <div class="reply-form" id="replyForm{{ comment.id }}">
+                        <div class="reply-form enhanced-form" id="replyForm{{ comment.id }}">
                             <form method="post" action="{{ url_for('lead_reply_comment', comment_id=comment.id) }}">
-                                <div class="message-compose">
-                                    <div class="compose-input">
-                                        <textarea class="form-control" name="reply" rows="3"
-                                                  placeholder="Type your reply to {{ comment.client.username }}..." required></textarea>
+                                <div class="compose-container">
+                                    <div class="compose-header">
+                                        <span class="compose-title">Reply to {{ comment.client.username }}</span>
+                                        <button type="button" class="btn-close-reply" onclick="toggleReplyForm({{ comment.id }})">
+                                            <i class="bi bi-x"></i>
+                                        </button>
                                     </div>
-                                    <div class="compose-actions mt-3">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="bi bi-send"></i> Send Reply
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary"
-                                                onclick="toggleReplyForm({{ comment.id }})">
-                                            <i class="bi bi-eye-slash"></i> Hide
-                                        </button>
+                                    <div class="compose-input">
+                                        <div class="input-wrapper">
+                                            <textarea class="form-control enhanced-textarea" name="reply" rows="3"
+                                                      placeholder="Type your reply..." required></textarea>
+                                            <div class="input-toolbar">
+                                                <button type="button" class="toolbar-btn" onclick="formatText('bold')" title="Bold">
+                                                    <i class="bi bi-type-bold"></i>
+                                                </button>
+                                                <button type="button" class="toolbar-btn" onclick="formatText('italic')" title="Italic">
+                                                    <i class="bi bi-type-italic"></i>
+                                                </button>
+                                                <button type="button" class="toolbar-btn" onclick="addEmoji()" title="Add emoji">
+                                                    <i class="bi bi-emoji-smile"></i>
+                                                </button>
+                                                <button type="button" class="toolbar-btn" onclick="addMention()" title="Mention">
+                                                    <i class="bi bi-at"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="compose-actions">
+                                        <div class="action-buttons">
+                                            <button type="submit" class="btn btn-primary enhanced-btn">
+                                                <i class="bi bi-send me-2"></i>Send Reply
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="toggleReplyForm({{ comment.id }})">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                        <div class="compose-info">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Press Ctrl+Enter to send
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </form>
                         </div>
                     {% elif comment.status in ['needs_revision', 'rejected'] and not has_client_replies %}
                         <!-- Show reply form for pending responses that need follow-up -->
-                        <div class="reply-form" id="replyForm{{ comment.id }}" style="display: none;">
+                        <div class="reply-form enhanced-form" id="replyForm{{ comment.id }}" style="display: none;">
                             <form method="post" action="{{ url_for('lead_reply_comment', comment_id=comment.id) }}">
-                                <div class="message-compose">
-                                    <div class="compose-input">
-                                        <textarea class="form-control" name="reply" rows="3"
-                                                  placeholder="Type your follow-up message to {{ comment.client.username }}..." required></textarea>
+                                <div class="compose-container">
+                                    <div class="compose-header">
+                                        <span class="compose-title">Follow-up with {{ comment.client.username }}</span>
+                                        <button type="button" class="btn-close-reply" onclick="toggleReplyForm({{ comment.id }})">
+                                            <i class="bi bi-x"></i>
+                                        </button>
                                     </div>
-                                    <div class="compose-actions mt-3">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="bi bi-send"></i> Send Follow-up
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary"
-                                                onclick="toggleReplyForm({{ comment.id }})">
-                                            Cancel
-                                        </button>
+                                    <div class="compose-input">
+                                        <div class="input-wrapper">
+                                            <textarea class="form-control enhanced-textarea" name="reply" rows="3"
+                                                      placeholder="Type your follow-up message..." required></textarea>
+                                            <div class="input-toolbar">
+                                                <button type="button" class="toolbar-btn" onclick="formatText('bold')" title="Bold">
+                                                    <i class="bi bi-type-bold"></i>
+                                                </button>
+                                                <button type="button" class="toolbar-btn" onclick="formatText('italic')" title="Italic">
+                                                    <i class="bi bi-type-italic"></i>
+                                                </button>
+                                                <button type="button" class="toolbar-btn" onclick="addEmoji()" title="Add emoji">
+                                                    <i class="bi bi-emoji-smile"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="compose-actions">
+                                        <div class="action-buttons">
+                                            <button type="submit" class="btn btn-primary enhanced-btn">
+                                                <i class="bi bi-send me-2"></i>Send Follow-up
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="toggleReplyForm({{ comment.id }})">
+                                                Cancel
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </form>
                         </div>
-                        <div class="text-center mt-2">
-                            <button class="btn btn-sm btn-outline-primary"
-                                    onclick="toggleReplyForm({{ comment.id }})">
-                                <i class="bi bi-plus-circle"></i> Add Follow-up Message
+                        <div class="text-center mt-3">
+                            <button class="btn btn-sm btn-outline-primary enhanced-add-btn" onclick="toggleReplyForm({{ comment.id }})">
+                                <i class="bi bi-plus-circle me-2"></i>Add Follow-up Message
                             </button>
                         </div>
                     {% endif %}
@@ -199,15 +320,55 @@
                     <i class="bi bi-chat-dots display-1 text-muted mb-3"></i>
                     <h5 class="text-muted">No Communications Yet</h5>
                     <p class="text-muted">Client communications will appear here when they respond to your reviews.</p>
+                    <div class="empty-actions mt-4">
+                        <button class="btn btn-outline-primary" onclick="refreshConversations()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+                        </button>
+                    </div>
                 </div>
             </div>
         {% endif %}
+    </div>
+
+    <!-- Typing Indicator -->
+    <div class="typing-indicator" id="typingIndicator" style="display: none;">
+        <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <span class="typing-text">Client is typing...</span>
     </div>
 </div>
 
 <script>
 let isTyping = false;
 let typingTimeout = null;
+let notificationsEnabled = true;
+
+function toggleNotifications() {
+    notificationsEnabled = !notificationsEnabled;
+    const icon = event.target.closest('button').querySelector('i');
+    if (notificationsEnabled) {
+        icon.className = 'bi bi-bell';
+        showNotification('Notifications enabled', 'success');
+    } else {
+        icon.className = 'bi bi-bell-slash';
+        showNotification('Notifications disabled', 'info');
+    }
+}
+
+function refreshConversations() {
+    const refreshBtn = event.target.closest('button');
+    const icon = refreshBtn.querySelector('i');
+    
+    // Animate refresh icon
+    icon.style.animation = 'spin 1s linear';
+    setTimeout(() => {
+        icon.style.animation = '';
+        window.location.reload();
+    }, 1000);
+}
 
 function toggleReplyForm(commentId) {
     const form = document.getElementById('replyForm' + commentId);
@@ -223,6 +384,153 @@ function toggleReplyForm(commentId) {
         }
     } else {
         form.style.display = 'none';
+    }
+}
+
+// Enhanced message actions
+function editMessage(messageId) {
+    // Show edit modal or inline editor
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+        const messageText = messageElement.querySelector('.message-text');
+        const originalText = messageText.textContent;
+        
+        // Create inline editor
+        const editor = document.createElement('textarea');
+        editor.className = 'form-control';
+        editor.value = originalText;
+        editor.rows = 3;
+        
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-sm btn-success me-2 mt-2';
+        saveBtn.innerHTML = '<i class="bi bi-check"></i> Save';
+        
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-sm btn-secondary mt-2';
+        cancelBtn.innerHTML = '<i class="bi bi-x"></i> Cancel';
+        
+        // Replace message text with editor
+        messageText.innerHTML = '';
+        messageText.appendChild(editor);
+        messageText.appendChild(saveBtn);
+        messageText.appendChild(cancelBtn);
+        
+        // Event handlers
+        saveBtn.onclick = () => {
+            // Here you would normally send the edit to the server
+            messageText.textContent = editor.value;
+            showNotification('Message updated (demo)', 'success');
+        };
+        
+        cancelBtn.onclick = () => {
+            messageText.textContent = originalText;
+        };
+        
+        editor.focus();
+    }
+}
+
+function deleteMessage(messageId) {
+    if (confirm('Are you sure you want to delete this message?')) {
+        // Here you would normally send delete request to server
+        showNotification('Message deleted (demo)', 'success');
+    }
+}
+
+function pinMessage(messageId) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+        messageElement.classList.toggle('pinned');
+        showNotification('Message pinned (demo)', 'info');
+    }
+}
+
+function replyToMessage(messageId) {
+    // Find the parent conversation and open reply form
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+        const conversationGroup = messageElement.closest('.message-group');
+        if (conversationGroup) {
+            const conversationId = conversationGroup.dataset.conversationId;
+            toggleReplyForm(conversationId);
+        }
+    }
+}
+
+function reactToMessage(messageId, reaction) {
+    // Add reaction to message
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+        const reactionsContainer = messageElement.querySelector('.message-reactions') || 
+                                  document.createElement('div');
+        reactionsContainer.className = 'message-reactions mt-2';
+        
+        const reactionBtn = document.createElement('span');
+        reactionBtn.className = 'reaction-badge';
+        reactionBtn.innerHTML = reaction === 'like' ? '👍 1' : '❤️ 1';
+        
+        reactionsContainer.appendChild(reactionBtn);
+        
+        if (!messageElement.querySelector('.message-reactions')) {
+            const messageContent = messageElement.querySelector('.message-content');
+            messageContent.appendChild(reactionsContainer);
+        }
+        
+        showNotification('Reaction added', 'success');
+    }
+}
+
+// Text formatting functions
+function formatText(format) {
+    const activeTextarea = document.activeElement;
+    if (activeTextarea.tagName === 'TEXTAREA') {
+        const start = activeTextarea.selectionStart;
+        const end = activeTextarea.selectionEnd;
+        const selectedText = activeTextarea.value.substring(start, end);
+        
+        let formattedText = selectedText;
+        if (format === 'bold') {
+            formattedText = `**${selectedText}**`;
+        } else if (format === 'italic') {
+            formattedText = `*${selectedText}*`;
+        }
+        
+        activeTextarea.value = activeTextarea.value.substring(0, start) + 
+                              formattedText + 
+                              activeTextarea.value.substring(end);
+        
+        // Reset cursor position
+        activeTextarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
+        activeTextarea.focus();
+    }
+}
+
+function addEmoji() {
+    const activeTextarea = document.activeElement;
+    if (activeTextarea.tagName === 'TEXTAREA') {
+        const emojis = ['😊', '👍', '❤️', '🎉', '👏', '💯', '🔥', '✅'];
+        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+        
+        const cursorPos = activeTextarea.selectionStart;
+        activeTextarea.value = activeTextarea.value.substring(0, cursorPos) + 
+                              randomEmoji + ' ' + 
+                              activeTextarea.value.substring(cursorPos);
+        
+        activeTextarea.setSelectionRange(cursorPos + 2, cursorPos + 2);
+        activeTextarea.focus();
+    }
+}
+
+function addMention() {
+    const activeTextarea = document.activeElement;
+    if (activeTextarea.tagName === 'TEXTAREA') {
+        const cursorPos = activeTextarea.selectionStart;
+        activeTextarea.value = activeTextarea.value.substring(0, cursorPos) + 
+                              '@client ' + 
+                              activeTextarea.value.substring(cursorPos);
+        
+        activeTextarea.setSelectionRange(cursorPos + 8, cursorPos + 8);
+        activeTextarea.focus();
     }
 }
 
@@ -396,66 +704,463 @@ function showFloatingNotification(notification) {
     }, 8000);
 }
 
-// Add CSS for better chat styling
+// Enhanced CSS for modern chat interface
 const chatCSS = `
+/* Enhanced Chat Container */
+.chat-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+    color: white;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f8fafc;
+}
+
+/* Enhanced Message Groups */
+.message-group {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.message-group:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+}
+
 .message-group.unread {
-    border-left: 4px solid #fbbf24;
-    background-color: rgba(251, 191, 36, 0.05);
+    border-left: 4px solid #3b82f6;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
-.reply-form {
+/* Product Context Card */
+.product-context-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #e5e7eb;
+}
+
+.client-badge {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-right: 8px;
+}
+
+.timestamp {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.question-snippet {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 3px solid #3b82f6;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+/* Messages Thread */
+.messages-thread {
+    margin-left: 20px;
+}
+
+.message {
+    display: flex;
+    margin-bottom: 20px;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.lead-message .message-avatar {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1d4ed8;
+}
+
+.client-message .message-avatar {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #059669;
+}
+
+.message-content {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+    position: relative;
+}
+
+.lead-message .message-content::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 16px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 8px 8px 0;
+    border-color: transparent white transparent transparent;
+}
+
+.client-message .message-content::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 16px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 8px 8px 0;
+    border-color: transparent #f0fdf4 transparent transparent;
+}
+
+.client-message .message-content {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.sender-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sender-name {
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.sender-role {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.message-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.delivery-status {
+    font-size: 0.8rem;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-badge.status-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.status-needs_revision {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge.status-pending {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.message-text {
+    margin: 12px 0;
+    line-height: 1.6;
+    color: #374151;
+}
+
+.message-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.action-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* Evidence Attachments */
+.evidence-attachment {
+    margin: 8px 0;
+}
+
+.attachment-link {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #374151;
+    transition: all 0.2s ease;
+    gap: 8px;
+}
+
+.attachment-link:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #1f2937;
+}
+
+/* Enhanced Reply Forms */
+.enhanced-form {
     animation: slideDown 0.3s ease-out;
+    margin-top: 20px;
 }
 
+.compose-container {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.compose-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8fafc;
+    border-radius: 12px 12px 0 0;
+}
+
+.compose-title {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.btn-close-reply {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-close-reply:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.compose-input {
+    padding: 20px;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.enhanced-textarea {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    transition: all 0.2s ease;
+}
+
+.enhanced-textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+.input-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 0;
+    border-top: 1px solid #f3f4f6;
+}
+
+.toolbar-btn {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.toolbar-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.compose-actions {
+    padding: 16px 20px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.enhanced-btn {
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    transition: all 0.2s ease;
+}
+
+.enhanced-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.enhanced-add-btn {
+    border: 2px dashed #d1d5db;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.enhanced-add-btn:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 12px 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.typing-dots span {
+    width: 6px;
+    height: 6px;
+    background: #3b82f6;
+    border-radius: 50%;
+    animation: typingPulse 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingPulse {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.typing-text {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+/* Animation keyframes */
 @keyframes slideDown {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateY(-20px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-.typing-indicator {
-    font-style: italic;
-    color: #6b7280;
-    font-size: 0.875rem;
-}
-
-.message-actions {
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.message-group:hover .message-actions {
-    opacity: 1;
-}
-
-.lead-message {
-    margin-left: 0;
-}
-
-.client-message {
-    margin-left: 2rem;
-    border-left: 3px solid #10b981;
-}
-
-.floating-notification {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 12px 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 9999;
-    max-width: 300px;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-    animation: slideInUp 0.3s ease-out;
 }
 
 @keyframes slideInUp {
@@ -469,16 +1174,219 @@ const chatCSS = `
     }
 }
 
-.compose-input textarea:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+/* Floating Notification */
+.floating-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    max-width: 300px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    animation: slideInUp 0.3s ease-out;
 }
 
-.message-compose {
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 16px;
+/* Additional Animations */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.message-group {
+    animation: fadeInScale 0.3s ease-out;
+}
+
+/* Message Reactions */
+.message-reactions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.reaction-badge {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
     border: 1px solid #e5e7eb;
+}
+
+.reaction-badge:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+/* Pinned Message Styles */
+.message-group.pinned {
+    border-left: 4px solid #f59e0b;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.message-group.pinned::before {
+    content: '📌 Pinned';
+    position: absolute;
+    top: -8px;
+    left: 16px;
+    background: #f59e0b;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* Enhanced Empty State */
+.empty-chat {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e5e7eb;
+}
+
+.empty-actions .btn {
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    transition: all 0.2s ease;
+}
+
+.empty-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Status Indicators */
+.online-indicator {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 4px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .chat-container {
+        height: calc(100vh - 80px);
+    }
+    
+    .chat-header {
+        padding: 16px;
+    }
+    
+    .chat-messages {
+        padding: 12px;
+    }
+    
+    .message-group {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .messages-thread {
+        margin-left: 10px;
+    }
+    
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    .message-content {
+        padding: 12px;
+        font-size: 0.9rem;
+    }
+    
+    .compose-container {
+        margin: 0 -4px;
+        border-radius: 8px;
+    }
+    
+    .compose-header {
+        padding: 12px 16px;
+    }
+    
+    .compose-input {
+        padding: 16px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .compose-actions {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        padding: 12px 16px;
+    }
+    
+    .input-toolbar {
+        flex-wrap: wrap;
+    }
+    
+    .toolbar-btn {
+        padding: 8px;
+        margin: 2px;
+    }
+    
+    .product-context-card {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    
+    .client-badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+    
+    .question-snippet {
+        font-size: 0.85rem;
+        padding: 10px;
+    }
+    
+    .typing-indicator {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        border-radius: 12px;
+    }
 }
 `;
 
