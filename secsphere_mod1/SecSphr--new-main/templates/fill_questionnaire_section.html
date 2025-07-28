@@ -47,12 +47,12 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center
                         {% if idx == section_idx %}active{% elif done %}text-success{% else %}text-muted{% endif %}">
                         <span>
-                            <i class="bi bi-{% if done %}circle-fill{% elif idx == section_idx %}arrow-right-circle-fill{% else %}circle{% endif %} me-2"></i>
+                            <i class="bi bi-{% if done %}check-circle-fill{% elif idx == section_idx %}arrow-right-circle-fill{% else %}circle{% endif %} me-2"></i>
                             <span class="d-none d-md-inline">{{ section }}</span>
                             <span class="d-md-none">{{ section[:15] }}{% if section|length > 15 %}...{% endif %}</span>
                         </span>
                         {% if done %}
-                            <i class="bi bi-circle-fill text-success"></i>
+                            <i class="bi bi-check-circle-fill text-success"></i>
                         {% elif idx == section_idx %}
                             <span class="badge bg-primary">Current</span>
                         {% endif %}
@@ -211,7 +211,10 @@
                                             <!-- Show existing evidence if any -->
                                             {% if existing_response and existing_response.evidence_path %}
                                             <div class="mt-2">
-                                                <small class="text-muted">Current evidence:</small>
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                                    <small class="text-success fw-bold">File Selected</small>
+                                                </div>
                                                 <div>
                                                     <a href="/{{ existing_response.evidence_path }}" target="_blank" class="btn btn-outline-info btn-sm">
                                                         <i class="bi bi-eye me-1"></i>View Current Evidence
@@ -488,13 +491,13 @@ document.querySelectorAll('.file-input').forEach(function(input) {
         const button = this.closest('.file-upload-container').querySelector('.file-upload-btn');
 
         if (fileName) {
-            fileNameDisplay.textContent = fileName;
-            button.innerHTML = '<i class="bi bi-paperclip me-2"></i>File Selected';
+            fileNameDisplay.innerHTML = '<i class="bi bi-check-circle-fill text-success me-2"></i><span class="text-success fw-bold">File Selected</span>';
+            button.innerHTML = '<i class="bi bi-paperclip me-1"></i>File Selected';
             button.classList.add('btn-success');
             button.classList.remove('btn-outline-secondary');
         } else {
             fileNameDisplay.textContent = '';
-            button.innerHTML = '<i class="bi bi-pin-angle-fill me-2"></i>Attach File';
+            button.innerHTML = '<i class="bi bi-paperclip me-1"></i>Attach File';
             button.classList.remove('btn-success');
             button.classList.add('btn-outline-secondary');
         }
